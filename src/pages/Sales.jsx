@@ -6,6 +6,7 @@ import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { saleCelebration, moneyRain } from '../lib/celebrate'
 import { Plus, CheckCircle, Clock, Pencil, Trash2, Search, Filter, X } from 'lucide-react'
+import { freelancerColor } from '../lib/colors'
 
 export default function Sales() {
   const toast = useToast()
@@ -262,7 +263,8 @@ export default function Sales() {
           <div key={s.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                  style={{ background: `linear-gradient(135deg, ${freelancerColor(s.profiles?.name).from}, ${freelancerColor(s.profiles?.name).to})` }}>
                   {s.profiles?.name?.charAt(0) || '$'}
                 </div>
                 <div>

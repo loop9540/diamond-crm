@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Loader from '../components/Loader'
 import { Package, Users, ShoppingCart, DollarSign, AlertCircle, ArrowLeftRight, Trophy } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { freelancerColor } from '../lib/colors'
 
 function StatCard({ icon: Icon, label, value, color = 'sage', onClick }) {
   const colors = {
@@ -227,12 +228,8 @@ export default function Dashboard() {
                   </div>
 
                   {/* Avatar */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                    i === 0 ? 'bg-gradient-to-br from-amber-300 to-amber-500 text-white shadow-md shadow-amber-200' :
-                    i === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-white' :
-                    i === 2 ? 'bg-gradient-to-br from-orange-300 to-orange-500 text-white' :
-                    'bg-gray-100 text-gray-500'
-                  }`}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 text-white"
+                    style={{ background: `linear-gradient(135deg, ${freelancerColor(f.name).from}, ${freelancerColor(f.name).to})` }}>
                     {f.name?.charAt(0)}
                   </div>
 

@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, UserPlus } from 'lucide-react'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
+import { freelancerColor } from '../lib/colors'
 
 const emptyForm = { name: '', email: '', phone: '' }
 
@@ -97,7 +98,8 @@ export default function Freelancers() {
           <div key={f.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#b3be94] to-[#8a9470] flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                  style={{ background: `linear-gradient(135deg, ${freelancerColor(f.name).from}, ${freelancerColor(f.name).to})` }}>
                   {f.name?.charAt(0)}
                 </div>
                 <div>
@@ -131,7 +133,8 @@ export default function Freelancers() {
               <tr key={f.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#b3be94] to-[#8a9470] flex items-center justify-center text-white text-[0.65rem] font-bold">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[0.65rem] font-bold"
+                      style={{ background: `linear-gradient(135deg, ${freelancerColor(f.name).from}, ${freelancerColor(f.name).to})` }}>
                       {f.name?.charAt(0)}
                     </div>
                     <span className="font-semibold text-gray-900 text-sm">{f.name}</span>

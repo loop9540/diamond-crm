@@ -7,6 +7,7 @@ import Inventory from './pages/Inventory'
 import Freelancers from './pages/Freelancers'
 import Clients from './pages/Clients'
 import Consignments from './pages/Consignments'
+import ConsignmentDetail from './pages/ConsignmentDetail'
 import Sales from './pages/Sales'
 import Reports from './pages/Reports'
 import MyStock from './pages/MyStock'
@@ -39,6 +40,7 @@ function AppRoutes() {
             <Route path="/freelancers" element={<Freelancers />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/consignments" element={<Consignments />} />
+            <Route path="/consignments/:freelancerId" element={<ConsignmentDetail />} />
             <Route path="/sales" element={<Sales />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/change-password" element={<ChangePassword />} />
