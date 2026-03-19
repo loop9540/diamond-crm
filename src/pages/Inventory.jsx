@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
+import Loader from '../components/Loader'
+import { useToast } from '../components/Toast'
 import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct', 'Other']
@@ -12,7 +14,9 @@ const emptySku = {
 }
 
 export default function Inventory() {
+  const toast = useToast()
   const [skus, setSkus] = useState([])
+  const [loading, setLoading] = useState(true)
   const [images, setImages] = useState({}) // { sku_id: [urls] }
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptySku)
@@ -37,6 +41,7 @@ export default function Inventory() {
       imgMap[img.sku_id].push(img)
     }
     setImages(imgMap)
+    setLoading(false)
   }
 
   function openAdd() {
@@ -67,6 +72,7 @@ export default function Inventory() {
       await supabase.from('skus').update(rest).eq('id', editId)
     }
     setModal(null)
+    toast(modal === 'add' ? 'SKU added' : 'SKU updated')
     load()
   }
 
@@ -79,6 +85,7 @@ export default function Inventory() {
       if (path) await supabase.storage.from('sku-images').remove([path])
     }
     await supabase.from('skus').delete().eq('id', id)
+    toast('SKU deleted')
     load()
   }
 
@@ -152,10 +159,12 @@ export default function Inventory() {
     return imgs?.[0]?.url || null
   }
 
+  if (loading) return <div className="mt-4"><Loader rows={3} /></div>
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Inventory</h1>
+        <h1 className="text-4xl">Inventory</h1>
         <button className="btn btn-primary btn-sm" onClick={openAdd}>
           <Plus size={16} /> Add SKU
         </button>

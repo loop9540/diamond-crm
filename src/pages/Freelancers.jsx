@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Pencil, Trash2, UserPlus } from 'lucide-react'
+import Loader from '../components/Loader'
+import { useToast } from '../components/Toast'
 
 const emptyForm = { name: '', email: '', phone: '' }
 
 export default function Freelancers() {
+  const toast = useToast()
+  const [loading, setLoading] = useState(true)
   const [freelancers, setFreelancers] = useState([])
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -19,6 +23,7 @@ export default function Freelancers() {
   async function load() {
     const { data } = await supabase.from('profiles').select('*').eq('role', 'freelancer').order('name')
     setFreelancers(data || [])
+    setLoading(false)
   }
 
   function openEdit(f) {
@@ -32,6 +37,7 @@ export default function Freelancers() {
       name: form.name, phone: form.phone
     }).eq('id', editId)
     setModal(null)
+    toast('Freelancer updated')
     load()
   }
 
@@ -64,10 +70,12 @@ export default function Freelancers() {
     load()
   }
 
+  if (loading) return <div className="mt-4"><Loader rows={3} /></div>
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Freelancers</h1>
+        <h1 className="text-4xl">Freelancers</h1>
         <button className="btn btn-primary btn-sm" onClick={() => setInviteModal(true)}>
           <UserPlus size={16} /> Invite
         </button>

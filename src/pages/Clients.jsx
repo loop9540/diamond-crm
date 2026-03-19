@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
+import Loader from '../components/Loader'
+import { useToast } from '../components/Toast'
 
 const emptyForm = { name: '', type: 'store', contact_info: '' }
 
 export default function Clients() {
+  const toast = useToast()
+  const [loading, setLoading] = useState(true)
   const [clients, setClients] = useState([])
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -16,6 +20,7 @@ export default function Clients() {
   async function load() {
     const { data } = await supabase.from('clients').select('*').order('name')
     setClients(data || [])
+    setLoading(false)
   }
 
   function openAdd() { setForm(emptyForm); setModal('add') }
@@ -29,12 +34,14 @@ export default function Clients() {
       await supabase.from('clients').update(rest).eq('id', editId)
     }
     setModal(null)
+    toast(modal === 'add' ? 'Client added' : 'Client updated')
     load()
   }
 
   async function remove(id) {
     if (!confirm('Delete this client?')) return
     await supabase.from('clients').delete().eq('id', id)
+    toast('Client deleted')
     load()
   }
 
@@ -43,10 +50,12 @@ export default function Clients() {
     return map[type] || 'badge-info'
   }
 
+  if (loading) return <div className="mt-4"><Loader rows={3} /></div>
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Clients</h1>
+        <h1 className="text-4xl">Clients</h1>
         <button className="btn btn-primary btn-sm" onClick={openAdd}>
           <Plus size={16} /> Add Client
         </button>

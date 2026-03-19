@@ -25,7 +25,7 @@ export default function MySales() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">My Sales</h1>
+      <h1 className="text-4xl mb-4">My Sales</h1>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="stat-card">

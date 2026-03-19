@@ -11,6 +11,7 @@ import Sales from './pages/Sales'
 import Reports from './pages/Reports'
 import MyStock from './pages/MyStock'
 import MySales from './pages/MySales'
+import { ToastProvider } from './components/Toast'
 import { Loader2 } from 'lucide-react'
 
 function AppRoutes() {
@@ -55,7 +56,9 @@ export default function App() {
   return (
     <HashRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
       </AuthProvider>
     </HashRouter>
   )

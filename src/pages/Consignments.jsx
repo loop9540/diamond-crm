@@ -3,12 +3,16 @@ import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, RotateCcw, ShoppingCart } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import Loader from '../components/Loader'
+import { useToast } from '../components/Toast'
 
 export default function Consignments() {
   const [consignments, setConsignments] = useState([])
   const [freelancers, setFreelancers] = useState([])
   const [skus, setSkus] = useState([])
   const navigate = useNavigate()
+  const toast = useToast()
+  const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ freelancer_id: '', sku_id: '', quantity: 1 })
 
@@ -23,6 +27,7 @@ export default function Consignments() {
     setConsignments(c.data || [])
     setFreelancers(f.data || [])
     setSkus(s.data || [])
+    setLoading(false)
   }
 
   async function assign() {
@@ -50,6 +55,7 @@ export default function Consignments() {
 
     setModal(false)
     setForm({ freelancer_id: '', sku_id: '', quantity: 1 })
+    toast('Stock assigned')
     load()
   }
 
@@ -65,13 +71,16 @@ export default function Consignments() {
     }
 
     await supabase.from('consignments').delete().eq('id', c.id)
+    toast('Stock returned to inventory')
     load()
   }
+
+  if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Consignments</h1>
+        <h1 className="text-4xl">Consignments</h1>
         <button className="btn btn-primary btn-sm" onClick={() => setModal(true)}>
           <Plus size={16} /> Assign Stock
         </button>

@@ -24,7 +24,7 @@ export default function MyStock() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">My Stock</h1>
+      <h1 className="text-4xl mb-4">My Stock</h1>
 
       <div className="stat-card mb-4">
         <div className="flex items-center gap-3">

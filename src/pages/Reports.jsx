@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Package, DollarSign, Users, AlertCircle } from 'lucide-react'
+import { Package, DollarSign, Users, AlertCircle, Download } from 'lucide-react'
+import Loader from '../components/Loader'
+import { useToast } from '../components/Toast'
 
 export default function Reports() {
+  const toast = useToast()
   const [tab, setTab] = useState('consignment')
+  const [loading, setLoading] = useState(true)
   const [consignmentData, setConsignmentData] = useState([])
   const [unpaidData, setUnpaidData] = useState([])
   const [profitData, setProfitData] = useState([])
@@ -83,6 +87,47 @@ export default function Reports() {
       }
     }
     setPerformanceData(Object.values(perfMap).sort((a, b) => b.revenue - a.revenue))
+    setLoading(false)
+  }
+
+  function exportCSV() {
+    let csv = ''
+    let filename = ''
+
+    if (tab === 'consignment') {
+      csv = 'Freelancer,SKU,Quantity\n'
+      consignmentData.forEach(f => f.items.forEach(item => {
+        csv += `"${f.name}","${item.sku}",${item.quantity}\n`
+      }))
+      filename = 'consignment-report.csv'
+    } else if (tab === 'unpaid') {
+      csv = 'Freelancer,SKU,Quantity,Total,Date\n'
+      unpaidData.forEach(s => {
+        csv += `"${s.freelancer}","${s.sku}",${s.quantity},${s.total},"${s.date}"\n`
+      })
+      filename = 'unpaid-sales-report.csv'
+    } else if (tab === 'profit') {
+      csv = 'SKU,Sold,Revenue,Cost,Fees,Profit\n'
+      profitData.forEach(p => {
+        csv += `"${p.name}",${p.sold},${p.revenue},${p.totalCost},${p.totalFees},${p.profit}\n`
+      })
+      filename = 'profit-per-sku-report.csv'
+    } else if (tab === 'performance') {
+      csv = 'Freelancer,Sales,Revenue,Fees\n'
+      performanceData.forEach(p => {
+        csv += `"${p.name}",${p.sales},${p.revenue},${p.fees}\n`
+      })
+      filename = 'freelancer-performance-report.csv'
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+    toast('Report exported')
   }
 
   const tabs = [
@@ -92,9 +137,16 @@ export default function Reports() {
     { id: 'performance', label: 'Performance', icon: Users },
   ]
 
+  if (loading) return <div className="mt-4"><Loader rows={4} /></div>
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">Reports</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-4xl">Reports</h1>
+        <button className="btn btn-secondary btn-sm" onClick={exportCSV}>
+          <Download size={14} /> Export CSV
+        </button>
+      </div>
 
       {/* Tab bar */}
       <div className="flex gap-1 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
