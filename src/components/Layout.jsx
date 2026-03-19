@@ -30,7 +30,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col">
       {/* Top bar */}
-      <header className="glass sticky top-0 z-40 px-4 py-3 flex items-center justify-between safe-top safe-left safe-right">
+      <header className="glass sticky top-0 z-40 px-5 py-4 flex items-center justify-between safe-top safe-left safe-right">
         <div className="flex items-center gap-3">
           <button className="sm:hidden p-1" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -78,7 +78,7 @@ export default function Layout() {
         {menuOpen && (
           <div className="fixed inset-0 z-30 sm:hidden" onClick={() => setMenuOpen(false)}>
             <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-            <nav className="absolute top-[53px] left-0 right-0 glass p-3 flex flex-col gap-1 border-t-0 rounded-b-2xl shadow-xl"
+            <nav className="absolute top-[57px] left-0 right-0 glass p-4 flex flex-col gap-1 border-t-0 rounded-b-2xl shadow-xl"
               onClick={e => e.stopPropagation()}>
               {nav.map(item => (
                 <NavLink
@@ -103,7 +103,7 @@ export default function Layout() {
         )}
 
         {/* Main content */}
-        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden page-enter safe-bottom safe-left safe-right">
+        <main className="flex-1 p-5 sm:p-6 overflow-x-hidden page-enter safe-bottom safe-left safe-right">
           <Outlet />
         </main>
       </div>
