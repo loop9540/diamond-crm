@@ -36,11 +36,11 @@ export default function Layout() {
           </button>
           <div className="flex items-center gap-2">
             <Gem size={20} className="text-[#5a6340]" />
-            <span className="text-xl hidden sm:inline" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>My Diamonds Shop</span>
+            <span className="text-xl hidden sm:inline" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>My Diamonds Shop</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500 hidden sm:inline">{profile?.name}</span>
+          <span className="text-sm text-gray-600">{profile?.name}</span>
           <span className="badge badge-info text-[0.65rem]">{isAdmin ? 'Admin' : 'Freelancer'}</span>
           <button onClick={signOut} className="p-1.5 rounded-lg hover:bg-white/50 transition-colors" title="Sign out">
             <LogOut size={18} className="text-gray-400" />

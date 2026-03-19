@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Pencil, Trash2, Upload, X, Image } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct', 'Other']
 const GOLD_TYPES = ['WG', 'YG', 'RG', 'Other']
@@ -128,6 +128,24 @@ export default function Inventory() {
   function autoName() {
     return `${form.carat_size} / ${form.gold_type}`
   }
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    if (!imageModal) return
+    function handleKey(e) {
+      const imgs = images[imageModal.skuId]
+      if (!imgs) return
+      if (e.key === 'ArrowRight' && imageModal.index < imgs.length - 1) {
+        setImageModal({ ...imageModal, index: imageModal.index + 1 })
+      } else if (e.key === 'ArrowLeft' && imageModal.index > 0) {
+        setImageModal({ ...imageModal, index: imageModal.index - 1 })
+      } else if (e.key === 'Escape') {
+        setImageModal(null)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [imageModal, images])
 
   function getThumb(skuId) {
     const imgs = images[skuId]
@@ -345,31 +363,56 @@ export default function Inventory() {
       )}
 
       {/* Image lightbox */}
-      {imageModal && images[imageModal.skuId] && (
-        <div className="modal-backdrop" onClick={() => setImageModal(null)}>
-          <div className="relative max-w-lg w-full mx-4" onClick={e => e.stopPropagation()}>
-            <img
-              src={images[imageModal.skuId][imageModal.index]?.url}
-              className="w-full rounded-2xl shadow-2xl"
-            />
-            <button onClick={() => setImageModal(null)}
-              className="absolute top-3 right-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center">
-              <X size={16} className="text-white" />
-            </button>
-            {/* Nav arrows */}
-            {images[imageModal.skuId].length > 1 && (
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                {images[imageModal.skuId].map((_, i) => (
-                  <button key={i}
-                    onClick={() => setImageModal({ ...imageModal, index: i })}
-                    className={`w-2 h-2 rounded-full transition-all ${i === imageModal.index ? 'bg-white w-6' : 'bg-white/50'}`}
-                  />
-                ))}
+      {imageModal && images[imageModal.skuId] && (() => {
+        const imgs = images[imageModal.skuId]
+        const idx = imageModal.index
+        const hasPrev = idx > 0
+        const hasNext = idx < imgs.length - 1
+        return (
+          <div className="modal-backdrop" onClick={() => setImageModal(null)}>
+            <div className="relative max-w-lg w-full mx-4" onClick={e => e.stopPropagation()}>
+              <img
+                src={imgs[idx]?.url}
+                className="w-full rounded-2xl shadow-2xl"
+              />
+              {/* Close */}
+              <button onClick={() => setImageModal(null)}
+                className="absolute top-3 right-3 w-10 h-10 bg-black/60 rounded-full flex items-center justify-center">
+                <X size={18} className="text-white" />
+              </button>
+              {/* Counter */}
+              <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                {idx + 1} / {imgs.length}
               </div>
-            )}
+              {/* Prev */}
+              {hasPrev && (
+                <button onClick={() => setImageModal({ ...imageModal, index: idx - 1 })}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center transition-colors">
+                  <ChevronLeft size={24} className="text-white" />
+                </button>
+              )}
+              {/* Next */}
+              {hasNext && (
+                <button onClick={() => setImageModal({ ...imageModal, index: idx + 1 })}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-black/40 hover:bg-black/60 rounded-full flex items-center justify-center transition-colors">
+                  <ChevronRight size={24} className="text-white" />
+                </button>
+              )}
+              {/* Dots */}
+              {imgs.length > 1 && (
+                <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                  {imgs.map((_, i) => (
+                    <button key={i}
+                      onClick={() => setImageModal({ ...imageModal, index: i })}
+                      className={`h-2 rounded-full transition-all ${i === idx ? 'bg-white w-6' : 'bg-white/50 w-2'}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, CheckCircle, Clock } from 'lucide-react'
+import { Plus, CheckCircle, Clock, Pencil, Trash2 } from 'lucide-react'
 
 export default function Sales() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -11,10 +11,14 @@ export default function Sales() {
   const [skus, setSkus] = useState([])
   const [clients, setClients] = useState([])
   const [consignments, setConsignments] = useState([])
-  const [modal, setModal] = useState(false)
+  const [modal, setModal] = useState(false) // false | 'new' | 'edit'
+  const [editSale, setEditSale] = useState(null)
   const [form, setForm] = useState({
     freelancer_id: '', sku_id: '', client_type: 'individual',
     client_id: '', quantity: 1, sale_price: '', payment_status: 'unpaid'
+  })
+  const [editForm, setEditForm] = useState({
+    sale_price: '', payment_status: '', client_type: '', client_id: ''
   })
 
   useEffect(() => { load() }, [])
@@ -34,7 +38,7 @@ export default function Sales() {
         sale_price: sku?.sell_price || '',
         payment_status: 'unpaid',
       })
-      setModal(true)
+      setModal('new')
       setSearchParams({})
     }
   }, [searchParams, skus])
@@ -63,7 +67,6 @@ export default function Sales() {
 
     if (isFreelancerSale) {
       if (!form.freelancer_id) return
-      // Check consignment
       const consignment = consignments.find(
         c => c.freelancer_id === form.freelancer_id && c.sku_id === form.sku_id && c.quantity >= qty
       )
@@ -72,7 +75,6 @@ export default function Sales() {
         return
       }
     } else {
-      // Direct sale — check inventory
       const sku = skus.find(s => s.id === form.sku_id)
       if (!sku || sku.quantity_available < qty) {
         alert('Not enough stock available')
@@ -80,7 +82,6 @@ export default function Sales() {
       }
     }
 
-    // Create sale
     await supabase.from('sales').insert({
       freelancer_id: isFreelancerSale ? form.freelancer_id : null,
       sku_id: form.sku_id,
@@ -92,7 +93,6 @@ export default function Sales() {
     })
 
     if (isFreelancerSale) {
-      // Reduce consignment
       const consignment = consignments.find(
         c => c.freelancer_id === form.freelancer_id && c.sku_id === form.sku_id && c.quantity >= qty
       )
@@ -103,7 +103,6 @@ export default function Sales() {
         await supabase.from('consignments').update({ quantity: newQty }).eq('id', consignment.id)
       }
     } else {
-      // Reduce inventory directly
       const sku = skus.find(s => s.id === form.sku_id)
       await supabase.from('skus').update({
         quantity_available: sku.quantity_available - qty
@@ -115,6 +114,64 @@ export default function Sales() {
       freelancer_id: '', sku_id: '', client_type: 'individual',
       client_id: '', quantity: 1, sale_price: '', payment_status: 'unpaid'
     })
+    load()
+  }
+
+  function openEdit(sale) {
+    setEditSale(sale)
+    setEditForm({
+      sale_price: sale.sale_price,
+      payment_status: sale.payment_status,
+      client_type: sale.client_type,
+      client_id: sale.client_id || '',
+    })
+    setModal('edit')
+  }
+
+  async function saveEdit() {
+    await supabase.from('sales').update({
+      sale_price: parseFloat(editForm.sale_price) || 0,
+      payment_status: editForm.payment_status,
+      client_type: editForm.client_type,
+      client_id: editForm.client_type === 'store' ? editForm.client_id : null,
+    }).eq('id', editSale.id)
+    setModal(false)
+    setEditSale(null)
+    load()
+  }
+
+  async function deleteSale(sale) {
+    if (!confirm('Delete this sale? Stock will be restored.')) return
+
+    const isFreelancerSale = sale.client_type === 'freelancer' && sale.freelancer_id
+
+    if (isFreelancerSale) {
+      // Restore to consignment
+      const existing = consignments.find(
+        c => c.freelancer_id === sale.freelancer_id && c.sku_id === sale.sku_id
+      )
+      if (existing) {
+        await supabase.from('consignments').update({
+          quantity: existing.quantity + sale.quantity
+        }).eq('id', existing.id)
+      } else {
+        await supabase.from('consignments').insert({
+          freelancer_id: sale.freelancer_id,
+          sku_id: sale.sku_id,
+          quantity: sale.quantity,
+        })
+      }
+    } else {
+      // Restore to inventory
+      const sku = skus.find(s => s.id === sale.sku_id)
+      if (sku) {
+        await supabase.from('skus').update({
+          quantity_available: sku.quantity_available + sale.quantity
+        }).eq('id', sale.sku_id)
+      }
+    }
+
+    await supabase.from('sales').delete().eq('id', sale.id)
     load()
   }
 
@@ -133,7 +190,7 @@ export default function Sales() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Sales</h1>
-        <button className="btn btn-primary btn-sm" onClick={() => setModal(true)}>
+        <button className="btn btn-primary btn-sm" onClick={() => setModal('new')}>
           <Plus size={16} /> New Sale
         </button>
       </div>
@@ -145,11 +202,14 @@ export default function Sales() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
-                  {s.profiles?.name?.charAt(0)}
+                  {s.profiles?.name?.charAt(0) || '$'}
                 </div>
                 <div>
                   <p className="font-semibold text-sm">{s.skus?.name}</p>
-                  <p className="text-xs text-gray-400">by {s.profiles?.name} &middot; {s.client_type === 'individual' ? 'Individual' : s.clients?.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {s.profiles?.name ? `by ${s.profiles.name} · ` : ''}
+                    {s.client_type === 'individual' ? 'Individual' : s.clients?.name}
+                  </p>
                 </div>
               </div>
               <button onClick={() => togglePayment(s)}
@@ -159,8 +219,16 @@ export default function Sales() {
               </button>
             </div>
             <div className="flex items-center justify-between mt-3">
-              <span className="text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()} &middot; {s.quantity} pcs × ${s.sale_price}</span>
+              <span className="text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()} · {s.quantity} pcs × ${s.sale_price}</span>
               <span className="font-bold text-sm text-gray-900">${(s.quantity * s.sale_price).toLocaleString()}</span>
+            </div>
+            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+              <button className="btn btn-secondary btn-sm flex-1" onClick={() => openEdit(s)}>
+                <Pencil size={14} /> Edit
+              </button>
+              <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => deleteSale(s)}>
+                <Trash2 size={16} />
+              </button>
             </div>
           </div>
         ))}
@@ -182,6 +250,7 @@ export default function Sales() {
               <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Price</th>
               <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Total</th>
               <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Status</th>
+              <th className="px-6 py-4"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -189,7 +258,7 @@ export default function Sales() {
               <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4 text-sm text-gray-400">{new Date(s.created_at).toLocaleDateString()}</td>
                 <td className="px-6 py-4 font-semibold text-gray-900 text-sm">{s.skus?.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{s.profiles?.name}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{s.profiles?.name || '—'}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{s.client_type === 'individual' ? 'Individual' : s.clients?.name}</td>
                 <td className="px-6 py-4 text-center">
                   <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{s.quantity}</span>
@@ -202,13 +271,24 @@ export default function Sales() {
                     {s.payment_status}
                   </button>
                 </td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-1 justify-end">
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(s)}>
+                      <Pencil size={16} />
+                    </button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => deleteSale(s)}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {modal && (
+      {/* New Sale Modal */}
+      {modal === 'new' && (
         <Modal title="Record Sale" onClose={() => setModal(false)}>
           <div className="flex flex-col gap-3">
             <div>
@@ -287,6 +367,80 @@ export default function Sales() {
               </select>
             </div>
             <button className="btn btn-primary w-full mt-2" onClick={createSale}>Record Sale</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Edit Sale Modal */}
+      {modal === 'edit' && editSale && (
+        <Modal title="Edit Sale" onClose={() => { setModal(false); setEditSale(null) }}>
+          <div className="flex flex-col gap-3">
+            {/* Read-only info */}
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-xs text-gray-400">SKU</p>
+                  <p className="font-medium">{editSale.skus?.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Quantity</p>
+                  <p className="font-medium">{editSale.quantity}</p>
+                </div>
+                {editSale.profiles?.name && (
+                  <div>
+                    <p className="text-xs text-gray-400">Freelancer</p>
+                    <p className="font-medium">{editSale.profiles.name}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-400">Date</p>
+                  <p className="font-medium">{new Date(editSale.created_at).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Editable fields */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Sale Price ($)</label>
+              <input type="number" step="0.01" className="input" value={editForm.sale_price}
+                onChange={e => setEditForm({ ...editForm, sale_price: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Payment Status</label>
+              <select className="input" value={editForm.payment_status}
+                onChange={e => setEditForm({ ...editForm, payment_status: e.target.value })}>
+                <option value="unpaid">Unpaid</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Client Type</label>
+              <select className="input" value={editForm.client_type}
+                onChange={e => setEditForm({ ...editForm, client_type: e.target.value, client_id: '' })}>
+                <option value="individual">Individual</option>
+                <option value="store">Store</option>
+                <option value="freelancer">Freelancer</option>
+              </select>
+            </div>
+            {editForm.client_type === 'store' && (
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Store</label>
+                <select className="input" value={editForm.client_id}
+                  onChange={e => setEditForm({ ...editForm, client_id: e.target.value })}>
+                  <option value="">Select...</option>
+                  {clients.filter(c => c.type === 'store').map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-2">
+              <button className="btn btn-primary flex-1" onClick={saveEdit}>Save Changes</button>
+              <button className="btn btn-danger" onClick={() => { setModal(false); deleteSale(editSale) }}>
+                <Trash2 size={16} /> Delete
+              </button>
+            </div>
           </div>
         </Modal>
       )}

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Package, Users, ShoppingCart, DollarSign, AlertCircle, ArrowLeftRight } from 'lucide-react'
 
-function StatCard({ icon: Icon, label, value, color = 'sage' }) {
+function StatCard({ icon: Icon, label, value, color = 'sage', onClick }) {
   const colors = {
     sage: 'bg-[#c3cca6] text-[#3a4025]',
     emerald: 'bg-emerald-500 text-white',
@@ -12,7 +13,7 @@ function StatCard({ icon: Icon, label, value, color = 'sage' }) {
     purple: 'bg-purple-500 text-white',
   }
   return (
-    <div className="stat-card">
+    <div className="stat-card cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all active:scale-100" onClick={onClick}>
       <div className="flex items-center gap-3">
         <div className={`${colors[color]} w-10 h-10 rounded-xl flex items-center justify-center shrink-0`}>
           <Icon size={20} />
@@ -27,6 +28,7 @@ function StatCard({ icon: Icon, label, value, color = 'sage' }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalInventory: 0,
     freelancers: 0,
@@ -69,12 +71,12 @@ export default function Dashboard() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard icon={Package} label="In Stock" value={stats.totalInventory} color="sage" />
-        <StatCard icon={ArrowLeftRight} label="Consigned" value={stats.consigned} color="purple" />
-        <StatCard icon={Users} label="Freelancers" value={stats.freelancers} color="blue" />
-        <StatCard icon={ShoppingCart} label="Total Sales" value={stats.totalSales} color="emerald" />
-        <StatCard icon={DollarSign} label="Revenue" value={`$${stats.revenue.toLocaleString()}`} color="amber" />
-        <StatCard icon={AlertCircle} label="Unpaid" value={`$${stats.unpaid.toLocaleString()}`} color="rose" />
+        <StatCard icon={Package} label="In Stock" value={stats.totalInventory} color="sage" onClick={() => navigate('/inventory')} />
+        <StatCard icon={ArrowLeftRight} label="Consigned" value={stats.consigned} color="purple" onClick={() => navigate('/consignments')} />
+        <StatCard icon={Users} label="Freelancers" value={stats.freelancers} color="blue" onClick={() => navigate('/freelancers')} />
+        <StatCard icon={ShoppingCart} label="Total Sales" value={stats.totalSales} color="emerald" onClick={() => navigate('/sales')} />
+        <StatCard icon={DollarSign} label="Revenue" value={`$${stats.revenue.toLocaleString()}`} color="amber" onClick={() => navigate('/reports')} />
+        <StatCard icon={AlertCircle} label="Unpaid" value={`$${stats.unpaid.toLocaleString()}`} color="rose" onClick={() => navigate('/reports')} />
       </div>
     </div>
   )
