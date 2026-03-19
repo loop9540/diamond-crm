@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Pencil, Trash2, UserPlus, KeyRound } from 'lucide-react'
+import { Plus, Pencil, Trash2, UserPlus, KeyRound, Eye } from 'lucide-react'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
+import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import { sparkle } from '../lib/celebrate'
 import { freelancerColor } from '../lib/colors'
 
@@ -11,6 +13,8 @@ const emptyForm = { name: '', email: '', phone: '' }
 
 export default function Freelancers() {
   const toast = useToast()
+  const { impersonate } = useAuth()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [freelancers, setFreelancers] = useState([])
   const [modal, setModal] = useState(null)
@@ -137,6 +141,7 @@ export default function Freelancers() {
                 </div>
               </div>
               <div className="flex gap-1">
+                <button className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => { impersonate(f); navigate('/') }} title="View as freelancer"><Eye size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" onClick={() => { setPasswordModal(f); setNewPassword('') }} title="Set password"><KeyRound size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
@@ -173,6 +178,7 @@ export default function Freelancers() {
                 <td className="px-6 py-4 text-sm text-gray-600">{f.phone || '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => { impersonate(f); navigate('/') }} title="View as freelancer"><Eye size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" onClick={() => { setPasswordModal(f); setNewPassword('') }} title="Set password"><KeyRound size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>

@@ -23,15 +23,25 @@ const freelancerNav = [
 ]
 
 export default function Layout() {
-  const { profile, signOut, isAdmin } = useAuth()
+  const { profile, signOut, isAdmin, impersonating, stopImpersonating } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const nav = isAdmin ? adminNav : freelancerNav
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col">
+      {/* Impersonation banner */}
+      {impersonating && (
+        <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-50 safe-top">
+          <span className="text-sm font-medium">Viewing as {profile?.name}</span>
+          <button className="text-sm font-bold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors"
+            onClick={() => { stopImpersonating(); navigate('/freelancers') }}>
+            Exit
+          </button>
+        </div>
+      )}
       {/* Top bar */}
-      <header className="glass sticky top-0 z-40 px-5 pb-4 flex items-center justify-between safe-top">
+      <header className={`glass sticky top-0 z-40 px-5 pb-4 flex items-center justify-between ${impersonating ? '' : 'safe-top'}`}>
         <div className="flex items-center gap-3">
           <button className="sm:hidden p-1" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}

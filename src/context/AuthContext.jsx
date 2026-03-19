@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [impersonating, setImpersonating] = useState(null) // { originalProfile, freelancerProfile }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,7 +40,6 @@ export function AuthProvider({ children }) {
     if (data) {
       setProfile(data)
     } else {
-      // Fallback: use auth user metadata if RLS blocks profile read
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (authUser) {
         setProfile({
@@ -61,10 +61,31 @@ export function AuthProvider({ children }) {
 
   const signOut = () => supabase.auth.signOut()
 
-  const isAdmin = profile?.role === 'admin'
+  function impersonate(freelancerProfile) {
+    setImpersonating({
+      originalProfile: profile,
+      originalUser: user,
+    })
+    setProfile(freelancerProfile)
+    setUser({ ...user, id: freelancerProfile.id })
+  }
+
+  function stopImpersonating() {
+    if (impersonating) {
+      setProfile(impersonating.originalProfile)
+      setUser(impersonating.originalUser)
+      setImpersonating(null)
+    }
+  }
+
+  const activeProfile = profile
+  const isAdmin = !impersonating && activeProfile?.role === 'admin'
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, isAdmin, fetchProfile }}>
+    <AuthContext.Provider value={{
+      user, profile: activeProfile, loading, signIn, signUp, signOut,
+      isAdmin, fetchProfile, impersonate, stopImpersonating, impersonating
+    }}>
       {children}
     </AuthContext.Provider>
   )
