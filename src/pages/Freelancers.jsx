@@ -76,20 +76,21 @@ export default function Freelancers() {
       {/* Mobile */}
       <div className="flex flex-col gap-3 sm:hidden">
         {freelancers.map(f => (
-          <div key={f.id} className="card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-sm">{f.name}</p>
-                <p className="text-xs text-gray-500">{f.email}</p>
-                {f.phone && <p className="text-xs text-gray-500">{f.phone}</p>}
+          <div key={f.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                  {f.name?.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{f.name}</p>
+                  <p className="text-xs text-gray-400">{f.email}</p>
+                  {f.phone && <p className="text-xs text-gray-400">{f.phone}</p>}
+                </div>
               </div>
               <div className="flex gap-1">
-                <button className="btn btn-secondary btn-sm" onClick={() => openEdit(f)}>
-                  <Pencil size={14} />
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => remove(f.id)}>
-                  <Trash2 size={14} />
-                </button>
+                <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
+                <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
               </div>
             </div>
           </div>
@@ -97,30 +98,33 @@ export default function Freelancers() {
       </div>
 
       {/* Desktop */}
-      <div className="hidden sm:block card p-0 overflow-hidden">
-        <table>
+      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="w-full">
           <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th></th>
+            <tr className="bg-gray-50/80">
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Name</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Email</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Phone</th>
+              <th className="px-6 py-4"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {freelancers.map(f => (
-              <tr key={f.id}>
-                <td className="font-medium">{f.name}</td>
-                <td>{f.email}</td>
-                <td>{f.phone || '—'}</td>
-                <td>
-                  <div className="flex gap-1">
-                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(f)}>
-                      <Pencil size={14} />
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => remove(f.id)}>
-                      <Trash2 size={14} />
-                    </button>
+              <tr key={f.id} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[0.65rem] font-bold">
+                      {f.name?.charAt(0)}
+                    </div>
+                    <span className="font-semibold text-gray-900 text-sm">{f.name}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">{f.email}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{f.phone || '—'}</td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-1 justify-end">
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>

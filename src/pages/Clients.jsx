@@ -55,20 +55,23 @@ export default function Clients() {
       {/* Mobile */}
       <div className="flex flex-col gap-3 sm:hidden">
         {clients.map(c => (
-          <div key={c.id} className="card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-sm">{c.name}</p>
-                <span className={`badge ${typeBadge(c.type)} mt-1`}>{c.type}</span>
-                {c.contact_info && <p className="text-xs text-gray-500 mt-1">{c.contact_info}</p>}
+          <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
+                  c.type === 'store' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
+                }`}>{c.name?.charAt(0)}</div>
+                <div>
+                  <p className="font-semibold text-sm">{c.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`badge ${typeBadge(c.type)}`}>{c.type}</span>
+                    {c.contact_info && <span className="text-xs text-gray-400">{c.contact_info}</span>}
+                  </div>
+                </div>
               </div>
               <div className="flex gap-1">
-                <button className="btn btn-secondary btn-sm" onClick={() => openEdit(c)}>
-                  <Pencil size={14} />
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => remove(c.id)}>
-                  <Trash2 size={14} />
-                </button>
+                <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(c)}><Pencil size={16} /></button>
+                <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(c.id)}><Trash2 size={16} /></button>
               </div>
             </div>
           </div>
@@ -76,25 +79,33 @@ export default function Clients() {
       </div>
 
       {/* Desktop */}
-      <div className="hidden sm:block card p-0 overflow-hidden">
-        <table>
+      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="w-full">
           <thead>
-            <tr><th>Name</th><th>Type</th><th>Contact</th><th></th></tr>
+            <tr className="bg-gray-50/80">
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Name</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Type</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Contact</th>
+              <th className="px-6 py-4"></th>
+            </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {clients.map(c => (
-              <tr key={c.id}>
-                <td className="font-medium">{c.name}</td>
-                <td><span className={`badge ${typeBadge(c.type)}`}>{c.type}</span></td>
-                <td>{c.contact_info || '—'}</td>
-                <td>
-                  <div className="flex gap-1">
-                    <button className="btn btn-secondary btn-sm" onClick={() => openEdit(c)}>
-                      <Pencil size={14} />
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => remove(c.id)}>
-                      <Trash2 size={14} />
-                    </button>
+              <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-[0.65rem] font-bold ${
+                      c.type === 'store' ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
+                    }`}>{c.name?.charAt(0)}</div>
+                    <span className="font-semibold text-gray-900 text-sm">{c.name}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4"><span className={`badge ${typeBadge(c.type)}`}>{c.type}</span></td>
+                <td className="px-6 py-4 text-sm text-gray-600">{c.contact_info || '—'}</td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-1 justify-end">
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(c)}><Pencil size={16} /></button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(c.id)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>

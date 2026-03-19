@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, RotateCcw } from 'lucide-react'
+import { Plus, RotateCcw, ShoppingCart } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export default function Consignments() {
   const [consignments, setConsignments] = useState([])
   const [freelancers, setFreelancers] = useState([])
   const [skus, setSkus] = useState([])
+  const navigate = useNavigate()
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ freelancer_id: '', sku_id: '', quantity: 1 })
 
@@ -78,20 +80,24 @@ export default function Consignments() {
       {/* Mobile */}
       <div className="flex flex-col gap-3 sm:hidden">
         {consignments.map(c => (
-          <div key={c.id} className="card">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-sm">{c.profiles?.name}</p>
-                <p className="text-xs text-gray-500">{c.skus?.name}</p>
-                <span className="badge badge-info mt-1">{c.quantity} pcs</span>
+          <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                  {c.profiles?.name?.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{c.profiles?.name}</p>
+                  <p className="text-xs text-gray-400">{c.skus?.name}</p>
+                </div>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => returnStock(c)}>
-                <RotateCcw size={14} /> Return
-              </button>
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-600">{c.quantity}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-2">
-              {new Date(c.created_at).toLocaleDateString()}
-            </p>
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => returnStock(c)}><RotateCcw size={14} /> Return</button>
+              <button className="btn btn-success btn-sm" onClick={() => navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`)}><ShoppingCart size={14} /> Sale</button>
+            </div>
           </div>
         ))}
         {consignments.length === 0 && (
@@ -100,28 +106,38 @@ export default function Consignments() {
       </div>
 
       {/* Desktop */}
-      <div className="hidden sm:block card p-0 overflow-hidden">
-        <table>
+      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="w-full">
           <thead>
-            <tr>
-              <th>Freelancer</th>
-              <th>SKU</th>
-              <th>Qty</th>
-              <th>Date</th>
-              <th></th>
+            <tr className="bg-gray-50/80">
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Freelancer</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">SKU</th>
+              <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Qty</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Date</th>
+              <th className="px-6 py-4"></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {consignments.map(c => (
-              <tr key={c.id}>
-                <td className="font-medium">{c.profiles?.name}</td>
-                <td>{c.skus?.name}</td>
-                <td><span className="badge badge-info">{c.quantity}</span></td>
-                <td className="text-gray-500">{new Date(c.created_at).toLocaleDateString()}</td>
-                <td>
-                  <button className="btn btn-secondary btn-sm" onClick={() => returnStock(c)}>
-                    <RotateCcw size={14} /> Return
-                  </button>
+              <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-[0.65rem] font-bold">
+                      {c.profiles?.name?.charAt(0)}
+                    </div>
+                    <span className="font-semibold text-gray-900 text-sm">{c.profiles?.name}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-600">{c.skus?.name}</td>
+                <td className="px-6 py-4 text-center">
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-600">{c.quantity}</span>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
+                <td className="px-6 py-4">
+                  <div className="flex justify-end">
+                    <button className="btn btn-secondary btn-sm" onClick={() => returnStock(c)}><RotateCcw size={14} /> Return</button>
+                    <button className="btn btn-success btn-sm" onClick={() => navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`)}><ShoppingCart size={14} /> Sale</button>
+                  </div>
                 </td>
               </tr>
             ))}
