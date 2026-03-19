@@ -103,7 +103,7 @@ export default function Consignments() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{g.name}</p>
-                    <p className="text-xs text-gray-400">{g.items.length} SKU{g.items.length !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-400">{new Set(g.items.map(c => c.sku_id)).size} SKU{new Set(g.items.map(c => c.sku_id)).size !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -114,11 +114,16 @@ export default function Consignments() {
                   <ChevronRight size={18} className="text-gray-300" />
                 </div>
               </div>
-              {/* SKU summary pills */}
+              {/* SKU summary pills (combined by SKU) */}
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {g.items.map(c => (
-                  <span key={c.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-gray-50 text-gray-600">
-                    {c.skus?.name} <span className="font-semibold text-[#5a6340]">×{c.quantity}</span>
+                {Object.values(g.items.reduce((acc, c) => {
+                  const name = c.skus?.name || 'Unknown'
+                  if (!acc[name]) acc[name] = { name, qty: 0 }
+                  acc[name].qty += c.quantity
+                  return acc
+                }, {})).sort((a, b) => a.name.localeCompare(b.name)).map(s => (
+                  <span key={s.name} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-gray-50 text-gray-600">
+                    {s.name} <span className="font-semibold text-[#5a6340]">×{s.qty}</span>
                   </span>
                 ))}
               </div>
