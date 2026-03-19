@@ -192,7 +192,7 @@ export default function Reports() {
           {performanceData.map((p, i) => (
             <div key={p.name} className="card">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#c3cca6]/30 text-[#5a6340] flex items-center justify-center text-sm font-bold shrink-0">
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">

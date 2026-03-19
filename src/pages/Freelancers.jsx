@@ -79,7 +79,7 @@ export default function Freelancers() {
           <div key={f.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#b3be94] to-[#8a9470] flex items-center justify-center text-white text-xs font-bold">
                   {f.name?.charAt(0)}
                 </div>
                 <div>
@@ -89,7 +89,7 @@ export default function Freelancers() {
                 </div>
               </div>
               <div className="flex gap-1">
-                <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
+                <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function Freelancers() {
               <tr key={f.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-[0.65rem] font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#b3be94] to-[#8a9470] flex items-center justify-center text-white text-[0.65rem] font-bold">
                       {f.name?.charAt(0)}
                     </div>
                     <span className="font-semibold text-gray-900 text-sm">{f.name}</span>
@@ -123,7 +123,7 @@ export default function Freelancers() {
                 <td className="px-6 py-4 text-sm text-gray-600">{f.phone || '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
                   </div>
                 </td>

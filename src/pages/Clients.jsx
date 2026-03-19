@@ -70,7 +70,7 @@ export default function Clients() {
                 </div>
               </div>
               <div className="flex gap-1">
-                <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(c)}><Pencil size={16} /></button>
+                <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(c)}><Pencil size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(c.id)}><Trash2 size={16} /></button>
               </div>
             </div>
@@ -104,7 +104,7 @@ export default function Clients() {
                 <td className="px-6 py-4 text-sm text-gray-600">{c.contact_info || '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(c)}><Pencil size={16} /></button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(c)}><Pencil size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(c.id)}><Trash2 size={16} /></button>
                   </div>
                 </td>

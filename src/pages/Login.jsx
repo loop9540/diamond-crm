@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { Diamond, Loader2 } from 'lucide-react'
+import { Gem, Loader2 } from 'lucide-react'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -22,10 +22,10 @@ export default function Login() {
     <div className="min-h-screen min-h-[100dvh] flex items-center justify-center p-4">
       <div className="card w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-500 text-white mb-3">
-            <Diamond size={28} />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#c3cca6] text-black mb-3">
+            <Gem size={28} />
           </div>
-          <h1 className="text-xl font-bold m-0">Diamond CRM</h1>
+          <h1 className="text-xl m-0">My Diamonds Shop</h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
         </div>
 

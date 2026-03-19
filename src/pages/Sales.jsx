@@ -192,7 +192,7 @@ export default function Sales() {
                 <td className="px-6 py-4 text-sm text-gray-600">{s.profiles?.name}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{s.client_type === 'individual' ? 'Individual' : s.clients?.name}</td>
                 <td className="px-6 py-4 text-center">
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-600">{s.quantity}</span>
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{s.quantity}</span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600 text-right">${s.sale_price}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">${(s.quantity * s.sale_price).toLocaleString()}</td>

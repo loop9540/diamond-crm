@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Package, Users, Building2, ArrowLeftRight,
-  ShoppingCart, BarChart3, LogOut, Diamond, Menu, X
+  ShoppingCart, BarChart3, LogOut, Gem, Menu, X
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -35,15 +35,15 @@ export default function Layout() {
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
           <div className="flex items-center gap-2">
-            <Diamond size={22} className="text-indigo-600" />
-            <span className="font-semibold text-sm hidden sm:inline">Diamond CRM</span>
+            <Gem size={20} className="text-[#5a6340]" />
+            <span className="text-xl hidden sm:inline" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>My Diamonds Shop</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-500 hidden sm:inline">{profile?.name}</span>
           <span className="badge badge-info text-[0.65rem]">{isAdmin ? 'Admin' : 'Freelancer'}</span>
           <button onClick={signOut} className="p-1.5 rounded-lg hover:bg-white/50 transition-colors" title="Sign out">
-            <LogOut size={18} className="text-gray-500" />
+            <LogOut size={18} className="text-gray-400" />
           </button>
         </div>
       </header>
@@ -59,8 +59,8 @@ export default function Layout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/25'
-                    : 'text-gray-600 hover:bg-white/60'
+                    ? 'bg-[#c3cca6] text-black shadow-sm'
+                    : 'text-gray-500 hover:bg-white/60 hover:text-black'
                 }`
               }
             >
@@ -85,8 +85,8 @@ export default function Layout() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       isActive
-                        ? 'bg-indigo-500 text-white shadow-md'
-                        : 'text-gray-600 hover:bg-white/60'
+                        ? 'bg-[#c3cca6] text-black shadow-sm'
+                        : 'text-gray-500 hover:bg-white/60 hover:text-black'
                     }`
                   }
                 >

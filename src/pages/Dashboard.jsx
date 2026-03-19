@@ -2,23 +2,23 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Package, Users, ShoppingCart, DollarSign, AlertCircle, ArrowLeftRight } from 'lucide-react'
 
-function StatCard({ icon: Icon, label, value, color = 'indigo' }) {
+function StatCard({ icon: Icon, label, value, color = 'sage' }) {
   const colors = {
-    indigo: 'bg-indigo-500',
-    green: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-    rose: 'bg-rose-500',
-    blue: 'bg-blue-500',
-    purple: 'bg-purple-500',
+    sage: 'bg-[#c3cca6] text-[#3a4025]',
+    emerald: 'bg-emerald-500 text-white',
+    amber: 'bg-amber-500 text-white',
+    rose: 'bg-rose-500 text-white',
+    blue: 'bg-blue-500 text-white',
+    purple: 'bg-purple-500 text-white',
   }
   return (
     <div className="stat-card">
       <div className="flex items-center gap-3">
-        <div className={`${colors[color]} w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0`}>
+        <div className={`${colors[color]} w-10 h-10 rounded-xl flex items-center justify-center shrink-0`}>
           <Icon size={20} />
         </div>
         <div className="min-w-0">
-          <p className="text-xs text-gray-500 truncate">{label}</p>
+          <p className="text-xs text-gray-400 truncate">{label}</p>
           <p className="text-xl font-bold mt-0.5">{value}</p>
         </div>
       </div>
@@ -69,10 +69,10 @@ export default function Dashboard() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard icon={Package} label="In Stock" value={stats.totalInventory} color="indigo" />
+        <StatCard icon={Package} label="In Stock" value={stats.totalInventory} color="sage" />
         <StatCard icon={ArrowLeftRight} label="Consigned" value={stats.consigned} color="purple" />
         <StatCard icon={Users} label="Freelancers" value={stats.freelancers} color="blue" />
-        <StatCard icon={ShoppingCart} label="Total Sales" value={stats.totalSales} color="green" />
+        <StatCard icon={ShoppingCart} label="Total Sales" value={stats.totalSales} color="emerald" />
         <StatCard icon={DollarSign} label="Revenue" value={`$${stats.revenue.toLocaleString()}`} color="amber" />
         <StatCard icon={AlertCircle} label="Unpaid" value={`$${stats.unpaid.toLocaleString()}`} color="rose" />
       </div>

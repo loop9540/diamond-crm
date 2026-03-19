@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, Image } from 'lucide-react'
 
-const CARAT_SIZES = ['1ct', '1.5ct', '2ct']
-const GOLD_TYPES = ['WG', 'YG']
+const CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct', 'Other']
+const GOLD_TYPES = ['WG', 'YG', 'RG', 'Other']
 
 const emptySku = {
   name: '', carat_size: '1ct', gold_type: 'WG',
@@ -13,25 +13,42 @@ const emptySku = {
 
 export default function Inventory() {
   const [skus, setSkus] = useState([])
-  const [modal, setModal] = useState(null) // null | 'add' | 'edit'
+  const [images, setImages] = useState({}) // { sku_id: [urls] }
+  const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptySku)
   const [editId, setEditId] = useState(null)
+  const [editImages, setEditImages] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [imageModal, setImageModal] = useState(null) // { skuId, index }
+  const fileRef = useRef()
 
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase.from('skus').select('*').order('gold_type').order('carat_size')
-    setSkus(data || [])
+    const [skuRes, imgRes] = await Promise.all([
+      supabase.from('skus').select('*').order('gold_type').order('carat_size'),
+      supabase.from('sku_images').select('*').order('position'),
+    ])
+    setSkus(skuRes.data || [])
+
+    const imgMap = {}
+    for (const img of imgRes.data || []) {
+      if (!imgMap[img.sku_id]) imgMap[img.sku_id] = []
+      imgMap[img.sku_id].push(img)
+    }
+    setImages(imgMap)
   }
 
   function openAdd() {
     setForm(emptySku)
+    setEditImages([])
     setModal('add')
   }
 
   function openEdit(sku) {
     setForm(sku)
     setEditId(sku.id)
+    setEditImages(images[sku.id] || [])
     setModal('edit')
   }
 
@@ -55,12 +72,66 @@ export default function Inventory() {
 
   async function remove(id) {
     if (!confirm('Delete this SKU?')) return
+    // Delete images from storage
+    const skuImages = images[id] || []
+    for (const img of skuImages) {
+      const path = img.url.split('/sku-images/')[1]
+      if (path) await supabase.storage.from('sku-images').remove([path])
+    }
     await supabase.from('skus').delete().eq('id', id)
+    load()
+  }
+
+  async function uploadImages(e) {
+    const files = Array.from(e.target.files)
+    if (!files.length || !editId) return
+    setUploading(true)
+
+    for (const file of files) {
+      const ext = file.name.split('.').pop()
+      const path = `${editId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('sku-images')
+        .upload(path, file)
+
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('sku-images')
+          .getPublicUrl(path)
+
+        const pos = editImages.length
+        await supabase.from('sku_images').insert({
+          sku_id: editId,
+          url: publicUrl,
+          position: pos,
+        })
+      }
+    }
+
+    // Reload images
+    const { data } = await supabase.from('sku_images').select('*').eq('sku_id', editId).order('position')
+    setEditImages(data || [])
+    setUploading(false)
+    if (fileRef.current) fileRef.current.value = ''
+    load()
+  }
+
+  async function removeImage(img) {
+    const path = img.url.split('/sku-images/')[1]
+    if (path) await supabase.storage.from('sku-images').remove([path])
+    await supabase.from('sku_images').delete().eq('id', img.id)
+    setEditImages(editImages.filter(i => i.id !== img.id))
     load()
   }
 
   function autoName() {
     return `${form.carat_size} / ${form.gold_type}`
+  }
+
+  function getThumb(skuId) {
+    const imgs = images[skuId]
+    return imgs?.[0]?.url || null
   }
 
   return (
@@ -78,11 +149,19 @@ export default function Inventory() {
           <div key={sku.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
-                  sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
-                }`}>{sku.gold_type}</div>
+                {getThumb(sku.id) ? (
+                  <img src={getThumb(sku.id)} className="w-12 h-12 rounded-lg object-cover cursor-pointer"
+                    onClick={() => setImageModal({ skuId: sku.id, index: 0 })} />
+                ) : (
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white text-xs font-bold ${
+                    sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
+                  }`}>{sku.gold_type}</div>
+                )}
                 <div>
                   <p className="font-semibold text-sm">{sku.name}</p>
+                  {(images[sku.id]?.length || 0) > 1 && (
+                    <p className="text-[0.65rem] text-gray-400">{images[sku.id].length} photos</p>
+                  )}
                 </div>
               </div>
               <span className={`text-xl font-bold ${sku.quantity_available > 0 ? 'text-emerald-500' : 'text-red-400'}`}>{sku.quantity_available}</span>
@@ -122,10 +201,20 @@ export default function Inventory() {
               <tr key={sku.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-[0.65rem] font-bold ${
-                      sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
-                    }`}>{sku.gold_type}</div>
-                    <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                    {getThumb(sku.id) ? (
+                      <img src={getThumb(sku.id)} className="w-10 h-10 rounded-lg object-cover cursor-pointer"
+                        onClick={() => setImageModal({ skuId: sku.id, index: 0 })} />
+                    ) : (
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-[0.65rem] font-bold ${
+                        sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
+                      }`}>{sku.gold_type}</div>
+                    )}
+                    <div>
+                      <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                      {(images[sku.id]?.length || 0) > 1 && (
+                        <p className="text-[0.65rem] text-gray-400">{images[sku.id].length} photos</p>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{sku.carat_size}</td>
@@ -143,7 +232,7 @@ export default function Inventory() {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={() => openEdit(sku)}>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(sku)}>
                       <Pencil size={16} />
                     </button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(sku.id)}>
@@ -157,7 +246,7 @@ export default function Inventory() {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Edit/Add Modal */}
       {modal && (
         <Modal title={modal === 'add' ? 'Add SKU' : 'Edit SKU'} onClose={() => setModal(null)}>
           <div className="flex flex-col gap-3">
@@ -204,11 +293,82 @@ export default function Inventory() {
               <input type="number" className="input" value={form.quantity_available}
                 onChange={e => setForm({ ...form, quantity_available: e.target.value })} />
             </div>
+
+            {/* Images section - only show when editing */}
+            {modal === 'edit' && (
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">Photos</label>
+
+                {/* Image grid */}
+                {editImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {editImages.map(img => (
+                      <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-100">
+                        <img src={img.url} className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => removeImage(img)}
+                          className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X size={12} className="text-white" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-[#c3cca6] hover:bg-[#c3cca6]/5 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {uploading ? (
+                    <span className="text-sm text-gray-400">Uploading...</span>
+                  ) : (
+                    <>
+                      <Upload size={16} className="text-gray-400" />
+                      <span className="text-sm text-gray-500">Add photos</span>
+                    </>
+                  )}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={uploadImages}
+                  />
+                </label>
+              </div>
+            )}
+
             <button className="btn btn-primary w-full mt-2" onClick={save}>
               {modal === 'add' ? 'Add SKU' : 'Save Changes'}
             </button>
           </div>
         </Modal>
+      )}
+
+      {/* Image lightbox */}
+      {imageModal && images[imageModal.skuId] && (
+        <div className="modal-backdrop" onClick={() => setImageModal(null)}>
+          <div className="relative max-w-lg w-full mx-4" onClick={e => e.stopPropagation()}>
+            <img
+              src={images[imageModal.skuId][imageModal.index]?.url}
+              className="w-full rounded-2xl shadow-2xl"
+            />
+            <button onClick={() => setImageModal(null)}
+              className="absolute top-3 right-3 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center">
+              <X size={16} className="text-white" />
+            </button>
+            {/* Nav arrows */}
+            {images[imageModal.skuId].length > 1 && (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                {images[imageModal.skuId].map((_, i) => (
+                  <button key={i}
+                    onClick={() => setImageModal({ ...imageModal, index: i })}
+                    className={`w-2 h-2 rounded-full transition-all ${i === imageModal.index ? 'bg-white w-6' : 'bg-white/50'}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )

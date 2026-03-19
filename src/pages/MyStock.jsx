@@ -28,7 +28,7 @@ export default function MyStock() {
 
       <div className="stat-card mb-4">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-500 w-10 h-10 rounded-xl flex items-center justify-center text-white">
+          <div className="bg-[#c3cca6] w-10 h-10 rounded-xl flex items-center justify-center text-white">
             <Package size={20} />
           </div>
           <div>

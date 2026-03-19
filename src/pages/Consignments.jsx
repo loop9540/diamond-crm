@@ -91,7 +91,7 @@ export default function Consignments() {
                   <p className="text-xs text-gray-400">{c.skus?.name}</p>
                 </div>
               </div>
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-600">{c.quantity}</span>
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{c.quantity}</span>
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</span>
@@ -130,7 +130,7 @@ export default function Consignments() {
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{c.skus?.name}</td>
                 <td className="px-6 py-4 text-center">
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-600">{c.quantity}</span>
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{c.quantity}</span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
                 <td className="px-6 py-4">
