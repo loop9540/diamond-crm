@@ -4,6 +4,7 @@ import Modal from '../components/Modal'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
+import { pop } from '../lib/celebrate'
 
 const emptyForm = { name: '', type: 'store', contact_info: '' }
 
@@ -35,6 +36,7 @@ export default function Clients() {
     }
     setModal(null)
     toast(modal === 'add' ? 'Client added' : 'Client updated')
+    if (modal === 'add') pop()
     load()
   }
 

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
+import { saleCelebration, moneyRain } from '../lib/celebrate'
 import { Plus, CheckCircle, Clock, Pencil, Trash2, Search, Filter, X } from 'lucide-react'
 
 export default function Sales() {
@@ -135,6 +136,7 @@ export default function Sales() {
     setModal(false)
     setForm({ freelancer_id: '', sku_id: '', client_type: 'individual', client_id: '', quantity: 1, sale_price: '', payment_status: 'unpaid' })
     toast('Sale recorded successfully')
+    saleCelebration()
     load()
   }
 
@@ -182,6 +184,7 @@ export default function Sales() {
     const newStatus = sale.payment_status === 'paid' ? 'unpaid' : 'paid'
     await supabase.from('sales').update({ payment_status: newStatus }).eq('id', sale.id)
     toast(newStatus === 'paid' ? 'Marked as paid' : 'Marked as unpaid')
+    if (newStatus === 'paid') moneyRain()
     load()
   }
 

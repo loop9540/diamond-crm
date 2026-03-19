@@ -4,6 +4,7 @@ import Modal from '../components/Modal'
 import { Plus, Pencil, Trash2, UserPlus } from 'lucide-react'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
+import { sparkle } from '../lib/celebrate'
 
 const emptyForm = { name: '', email: '', phone: '' }
 
@@ -66,6 +67,7 @@ export default function Freelancers() {
       })
     }
     setInviteMsg('Freelancer account created!')
+    sparkle()
     setInviteForm({ email: '', password: '', name: '' })
     load()
   }

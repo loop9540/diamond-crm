@@ -5,6 +5,7 @@ import { Plus, RotateCcw, ShoppingCart } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
+import { assignBurst, pop } from '../lib/celebrate'
 
 export default function Consignments() {
   const [consignments, setConsignments] = useState([])
@@ -56,6 +57,7 @@ export default function Consignments() {
     setModal(false)
     setForm({ freelancer_id: '', sku_id: '', quantity: 1 })
     toast('Stock assigned')
+    assignBurst()
     load()
   }
 
@@ -72,6 +74,7 @@ export default function Consignments() {
 
     await supabase.from('consignments').delete().eq('id', c.id)
     toast('Stock returned to inventory')
+    pop()
     load()
   }
 

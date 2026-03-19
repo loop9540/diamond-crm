@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
+import { sparkle } from '../lib/celebrate'
 import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct', 'Other']
@@ -73,6 +74,7 @@ export default function Inventory() {
     }
     setModal(null)
     toast(modal === 'add' ? 'SKU added' : 'SKU updated')
+    if (modal === 'add') sparkle()
     load()
   }
 
