@@ -8,8 +8,8 @@ export default function Modal({ title, onClose, children }) {
   }, [])
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+    <div className="modal-backdrop">
+      <div className="modal-content">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold m-0">{title}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
