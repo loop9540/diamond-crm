@@ -5,9 +5,7 @@ import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
 import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react'
-
-const CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct', 'Other']
-const GOLD_TYPES = ['WG', 'YG', 'RG', 'Other']
+import { getCaratSizes, getGoldTypes } from './Settings'
 
 const emptySku = {
   name: '', carat_size: '1ct', gold_type: 'WG',
@@ -284,14 +282,14 @@ export default function Inventory() {
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Carat Size</label>
                 <select className="input" value={form.carat_size}
                   onChange={e => setForm({ ...form, carat_size: e.target.value, name: `${e.target.value} / ${form.gold_type}` })}>
-                  {CARAT_SIZES.map(s => <option key={s}>{s}</option>)}
+                  {getCaratSizes().map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Gold Type</label>
                 <select className="input" value={form.gold_type}
                   onChange={e => setForm({ ...form, gold_type: e.target.value, name: `${form.carat_size} / ${e.target.value}` })}>
-                  {GOLD_TYPES.map(g => <option key={g}>{g}</option>)}
+                  {getGoldTypes().map(g => <option key={g}>{g}</option>)}
                 </select>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Pencil, Trash2, UserPlus } from 'lucide-react'
+import { Plus, Pencil, Trash2, UserPlus, KeyRound } from 'lucide-react'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
@@ -19,6 +19,8 @@ export default function Freelancers() {
   const [inviteModal, setInviteModal] = useState(false)
   const [inviteForm, setInviteForm] = useState({ email: '', password: '', name: '' })
   const [inviteMsg, setInviteMsg] = useState('')
+  const [passwordModal, setPasswordModal] = useState(null)
+  const [newPassword, setNewPassword] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -81,6 +83,32 @@ export default function Freelancers() {
     load()
   }
 
+  async function setPassword() {
+    if (!passwordModal || newPassword.length < 6) {
+      toast('Password must be at least 6 characters', 'error')
+      return
+    }
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/admin/users/${passwordModal.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_KEY}`,
+        },
+        body: JSON.stringify({ password: newPassword }),
+      }
+    )
+    if (!res.ok) {
+      toast('Failed to update password', 'error')
+      return
+    }
+    setPasswordModal(null)
+    setNewPassword('')
+    toast('Password updated')
+  }
+
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
   return (
@@ -109,6 +137,7 @@ export default function Freelancers() {
                 </div>
               </div>
               <div className="flex gap-1">
+                <button className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" onClick={() => { setPasswordModal(f); setNewPassword('') }} title="Set password"><KeyRound size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
                 <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
               </div>
@@ -144,6 +173,7 @@ export default function Freelancers() {
                 <td className="px-6 py-4 text-sm text-gray-600">{f.phone || '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" onClick={() => { setPasswordModal(f); setNewPassword('') }} title="Set password"><KeyRound size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(f)}><Pencil size={16} /></button>
                     <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(f.id)}><Trash2 size={16} /></button>
                   </div>
@@ -171,6 +201,20 @@ export default function Freelancers() {
               <input className="input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
             </div>
             <button className="btn btn-primary w-full mt-2" onClick={saveEdit}>Save</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Password Modal */}
+      {passwordModal && (
+        <Modal title={`Set Password — ${passwordModal.name}`} onClose={() => setPasswordModal(null)}>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">New Password</label>
+              <input type="text" className="input" value={newPassword} placeholder="Min 6 characters"
+                onChange={e => setNewPassword(e.target.value)} />
+            </div>
+            <button className="btn btn-primary w-full mt-2" onClick={setPassword}>Update Password</button>
           </div>
         </Modal>
       )}

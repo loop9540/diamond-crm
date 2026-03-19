@@ -211,12 +211,12 @@ select.input {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 999px; }
 
-/* Safe areas for iPhone Dynamic Island & notch — uses max() to preserve existing padding */
+/* Safe areas for iPhone Dynamic Island & notch */
 .safe-top {
-  padding-top: max(env(safe-area-inset-top, 0px), var(--tw-pt, 15px));
+  padding-top: calc(15px + env(safe-area-inset-top, 0px)) !important;
 }
 .safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--tw-pb, 0px));
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 /* Playful animations */

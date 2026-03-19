@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Package, Users, Building2, ArrowLeftRight,
-  ShoppingCart, BarChart3, LogOut, Gem, Menu, X, KeyRound
+  ShoppingCart, BarChart3, LogOut, Gem, Menu, X, KeyRound, Settings
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -14,6 +14,7 @@ const adminNav = [
   { to: '/consignments', icon: ArrowLeftRight, label: 'Consignments' },
   { to: '/sales', icon: ShoppingCart, label: 'Sales' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 const freelancerNav = [
@@ -30,7 +31,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col">
       {/* Top bar */}
-      <header className="glass sticky top-0 z-40 px-5 pt-5 pb-4 flex items-center justify-between safe-top">
+      <header className="glass sticky top-0 z-40 px-5 pb-4 flex items-center justify-between safe-top">
         <div className="flex items-center gap-3">
           <button className="sm:hidden p-1" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
