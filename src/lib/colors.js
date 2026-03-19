@@ -9,11 +9,11 @@ const COLORS = [
   { from: '#f97316', to: '#ea580c' }, // orange
 ]
 
-// Deterministic color based on name — same name always gets same color
+// Deterministic color based on name — uses a better hash to avoid collisions
 export function freelancerColor(name) {
-  let hash = 0
+  let hash = 5381
   for (let i = 0; i < (name || '').length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    hash = ((hash << 5) + hash + name.charCodeAt(i)) >>> 0
   }
-  return COLORS[Math.abs(hash) % COLORS.length]
+  return COLORS[hash % COLORS.length]
 }
