@@ -30,7 +30,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col">
       {/* Top bar */}
-      <header className="glass sticky top-0 z-40 px-4 py-3 flex items-center justify-between safe-top">
+      <header className="glass sticky top-0 z-40 px-4 py-3 flex items-center justify-between safe-top safe-left safe-right">
         <div className="flex items-center gap-3">
           <button className="sm:hidden p-1" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -103,7 +103,7 @@ export default function Layout() {
         )}
 
         {/* Main content */}
-        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden page-enter">
+        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden page-enter safe-bottom safe-left safe-right">
           <Outlet />
         </main>
       </div>
