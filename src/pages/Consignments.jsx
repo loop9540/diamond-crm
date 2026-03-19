@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, RotateCcw, ShoppingCart, Search, Filter, X } from 'lucide-react'
+import { Plus, RotateCcw, ShoppingCart, ChevronRight, Package } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
@@ -14,18 +14,11 @@ export default function Consignments() {
   const navigate = useNavigate()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(false) // false | 'assign' | 'return'
+  const [modal, setModal] = useState(false) // false | 'assign' | 'return' | 'detail'
   const [returnTarget, setReturnTarget] = useState(null)
   const [returnQty, setReturnQty] = useState(1)
   const [form, setForm] = useState({ freelancer_id: '', sku_id: '', quantity: 1 })
-
-  // Filters
-  const [search, setSearch] = useState('')
-  const [filterFreelancer, setFilterFreelancer] = useState('all')
-  const [filterSku, setFilterSku] = useState('all')
-  const [filterDateFrom, setFilterDateFrom] = useState('')
-  const [filterDateTo, setFilterDateTo] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
+  const [selectedFreelancer, setSelectedFreelancer] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -45,21 +38,18 @@ export default function Consignments() {
     const qty = parseInt(form.quantity)
     if (!form.freelancer_id || !form.sku_id || qty <= 0) return
 
-    // Check stock
     const sku = skus.find(s => s.id === form.sku_id)
     if (!sku || sku.quantity_available < qty) {
       alert('Not enough stock available')
       return
     }
 
-    // Create consignment
     await supabase.from('consignments').insert({
       freelancer_id: form.freelancer_id,
       sku_id: form.sku_id,
       quantity: qty,
     })
 
-    // Decrease inventory
     await supabase.from('skus').update({
       quantity_available: sku.quantity_available - qty
     }).eq('id', form.sku_id)
@@ -85,7 +75,6 @@ export default function Consignments() {
       return
     }
 
-    // Return to inventory
     const sku = skus.find(s => s.id === c.sku_id)
     if (sku) {
       await supabase.from('skus').update({
@@ -93,7 +82,6 @@ export default function Consignments() {
       }).eq('id', c.sku_id)
     }
 
-    // Update or delete consignment
     const remaining = c.quantity - qty
     if (remaining <= 0) {
       await supabase.from('consignments').delete().eq('id', c.id)
@@ -108,26 +96,26 @@ export default function Consignments() {
     load()
   }
 
-  // Filtered consignments
-  const filtered = consignments.filter(c => {
-    if (filterFreelancer !== 'all' && c.freelancer_id !== filterFreelancer) return false
-    if (filterSku !== 'all' && c.sku_id !== filterSku) return false
-    if (filterDateFrom && new Date(c.created_at) < new Date(filterDateFrom)) return false
-    if (filterDateTo && new Date(c.created_at) > new Date(filterDateTo + 'T23:59:59')) return false
-    if (search) {
-      const q = search.toLowerCase()
-      const matchName = c.profiles?.name?.toLowerCase().includes(q)
-      const matchSku = c.skus?.name?.toLowerCase().includes(q)
-      if (!matchName && !matchSku) return false
+  // Group consignments by freelancer
+  const grouped = {}
+  for (const c of consignments) {
+    const fid = c.freelancer_id
+    if (!grouped[fid]) {
+      grouped[fid] = {
+        freelancer_id: fid,
+        name: c.profiles?.name || 'Unknown',
+        items: [],
+        totalPieces: 0,
+      }
     }
-    return true
-  })
+    grouped[fid].items.push(c)
+    grouped[fid].totalPieces += c.quantity
+  }
+  const freelancerGroups = Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name))
 
-  const hasFilters = filterFreelancer !== 'all' || filterSku !== 'all' || filterDateFrom || filterDateTo || search
-
-  function clearFilters() {
-    setSearch(''); setFilterFreelancer('all'); setFilterSku('all')
-    setFilterDateFrom(''); setFilterDateTo('')
+  function openDetail(group) {
+    setSelectedFreelancer(group)
+    setModal('detail')
   }
 
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
@@ -141,122 +129,79 @@ export default function Consignments() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="relative flex-1 min-w-[160px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-          <input className="input pl-8 w-full" placeholder="Search freelancer or SKU..."
-            value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <button className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setShowFilters(!showFilters)}>
-          <Filter size={14} /> Filters
-        </button>
-        {hasFilters && (
-          <button className="btn btn-sm btn-secondary text-red-500" onClick={clearFilters}>
-            <X size={14} /> Clear
-          </button>
-        )}
-      </div>
-
-      {showFilters && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white rounded-xl border border-gray-100 p-3 mb-4">
-          <div>
-            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">Freelancer</label>
-            <select className="input" value={filterFreelancer} onChange={e => setFilterFreelancer(e.target.value)}>
-              <option value="all">All</option>
-              {freelancers.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">SKU</label>
-            <select className="input" value={filterSku} onChange={e => setFilterSku(e.target.value)}>
-              <option value="all">All</option>
-              {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">From</label>
-            <input type="date" className="input" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">To</label>
-            <input type="date" className="input" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
-          </div>
-        </div>
-      )}
-
-      {hasFilters && (
-        <p className="text-xs text-gray-400 mb-3">{filtered.length} of {consignments.length} consignments</p>
-      )}
-
-      {/* Mobile */}
-      <div className="flex flex-col gap-3 sm:hidden">
-        {filtered.map(c => (
-          <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+      {/* Freelancer Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {freelancerGroups.map(g => (
+          <div key={g.freelancer_id}
+            onClick={() => openDetail(g)}
+            className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 cursor-pointer hover:shadow-md hover:border-gray-200 transition-all">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                  {c.profiles?.name?.charAt(0)}
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                  {g.name?.charAt(0)}
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">{c.profiles?.name}</p>
-                  <p className="text-xs text-gray-400">{c.skus?.name}</p>
+                  <p className="font-semibold text-gray-900">{g.name}</p>
+                  <p className="text-xs text-gray-400">{g.items.length} SKU{g.items.length !== 1 ? 's' : ''}</p>
                 </div>
               </div>
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{c.quantity}</span>
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-[#5a6340]">{g.totalPieces}</p>
+                  <p className="text-[0.6rem] uppercase tracking-wider text-gray-400">pieces</p>
+                </div>
+                <ChevronRight size={18} className="text-gray-300" />
+              </div>
             </div>
-            <div className="flex items-center justify-between mt-3">
-              <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => openReturn(c)}><RotateCcw size={14} /> Return</button>
-              <button className="btn btn-success btn-sm" onClick={() => navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`)}><ShoppingCart size={14} /> Sale</button>
+            {/* SKU summary pills */}
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {g.items.map(c => (
+                <span key={c.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-gray-50 text-gray-600">
+                  {c.skus?.name} <span className="font-semibold text-[#5a6340]">×{c.quantity}</span>
+                </span>
+              ))}
             </div>
           </div>
         ))}
-        {filtered.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">No active consignments</p>
-        )}
       </div>
 
-      {/* Desktop */}
-      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50/80">
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Freelancer</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">SKU</th>
-              <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Qty</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Date</th>
-              <th className="px-6 py-4"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.map(c => (
-              <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white text-[0.65rem] font-bold">
-                      {c.profiles?.name?.charAt(0)}
-                    </div>
-                    <span className="font-semibold text-gray-900 text-sm">{c.profiles?.name}</span>
+      {freelancerGroups.length === 0 && (
+        <div className="text-center py-12">
+          <Package size={40} className="mx-auto text-gray-200 mb-3" />
+          <p className="text-gray-400 text-sm">No active consignments</p>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {modal === 'detail' && selectedFreelancer && (
+        <Modal title={`${selectedFreelancer.name}'s Stock`} onClose={() => { setModal(false); setSelectedFreelancer(null) }}>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 mb-1">
+              <span className="text-sm text-gray-500">Total Pieces</span>
+              <span className="text-xl font-bold text-[#5a6340]">{selectedFreelancer.totalPieces}</span>
+            </div>
+            {selectedFreelancer.items.map(c => (
+              <div key={c.id} className="bg-white border border-gray-100 rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">{c.skus?.name}</p>
+                    <p className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</p>
                   </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{c.skus?.name}</td>
-                <td className="px-6 py-4 text-center">
                   <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{c.quantity}</span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end">
-                    <button className="btn btn-secondary btn-sm" onClick={() => openReturn(c)}><RotateCcw size={14} /> Return</button>
-                    <button className="btn btn-success btn-sm" onClick={() => navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`)}><ShoppingCart size={14} /> Sale</button>
-                  </div>
-                </td>
-              </tr>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn btn-secondary btn-sm flex-1" onClick={() => { setModal(false); setSelectedFreelancer(null); setTimeout(() => openReturn(c), 100) }}>
+                    <RotateCcw size={14} /> Return
+                  </button>
+                  <button className="btn btn-success btn-sm flex-1" onClick={() => { setModal(false); setSelectedFreelancer(null); navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`) }}>
+                    <ShoppingCart size={14} /> Sale
+                  </button>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </Modal>
+      )}
 
       {modal === 'assign' && (
         <Modal title="Assign Stock to Freelancer" onClose={() => setModal(false)}>
