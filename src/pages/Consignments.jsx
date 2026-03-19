@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, RotateCcw, ShoppingCart } from 'lucide-react'
+import { Plus, RotateCcw, ShoppingCart, Search, Filter, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
@@ -18,6 +18,14 @@ export default function Consignments() {
   const [returnTarget, setReturnTarget] = useState(null)
   const [returnQty, setReturnQty] = useState(1)
   const [form, setForm] = useState({ freelancer_id: '', sku_id: '', quantity: 1 })
+
+  // Filters
+  const [search, setSearch] = useState('')
+  const [filterFreelancer, setFilterFreelancer] = useState('all')
+  const [filterSku, setFilterSku] = useState('all')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -100,6 +108,28 @@ export default function Consignments() {
     load()
   }
 
+  // Filtered consignments
+  const filtered = consignments.filter(c => {
+    if (filterFreelancer !== 'all' && c.freelancer_id !== filterFreelancer) return false
+    if (filterSku !== 'all' && c.sku_id !== filterSku) return false
+    if (filterDateFrom && new Date(c.created_at) < new Date(filterDateFrom)) return false
+    if (filterDateTo && new Date(c.created_at) > new Date(filterDateTo + 'T23:59:59')) return false
+    if (search) {
+      const q = search.toLowerCase()
+      const matchName = c.profiles?.name?.toLowerCase().includes(q)
+      const matchSku = c.skus?.name?.toLowerCase().includes(q)
+      if (!matchName && !matchSku) return false
+    }
+    return true
+  })
+
+  const hasFilters = filterFreelancer !== 'all' || filterSku !== 'all' || filterDateFrom || filterDateTo || search
+
+  function clearFilters() {
+    setSearch(''); setFilterFreelancer('all'); setFilterSku('all')
+    setFilterDateFrom(''); setFilterDateTo('')
+  }
+
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
   return (
@@ -111,9 +141,58 @@ export default function Consignments() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-[160px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+          <input className="input pl-8 w-full" placeholder="Search freelancer or SKU..."
+            value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <button className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setShowFilters(!showFilters)}>
+          <Filter size={14} /> Filters
+        </button>
+        {hasFilters && (
+          <button className="btn btn-sm btn-secondary text-red-500" onClick={clearFilters}>
+            <X size={14} /> Clear
+          </button>
+        )}
+      </div>
+
+      {showFilters && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white rounded-xl border border-gray-100 p-3 mb-4">
+          <div>
+            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">Freelancer</label>
+            <select className="input" value={filterFreelancer} onChange={e => setFilterFreelancer(e.target.value)}>
+              <option value="all">All</option>
+              {freelancers.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">SKU</label>
+            <select className="input" value={filterSku} onChange={e => setFilterSku(e.target.value)}>
+              <option value="all">All</option>
+              {skus.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">From</label>
+            <input type="date" className="input" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[0.65rem] uppercase tracking-wider text-gray-400 mb-1 block">To</label>
+            <input type="date" className="input" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      {hasFilters && (
+        <p className="text-xs text-gray-400 mb-3">{filtered.length} of {consignments.length} consignments</p>
+      )}
+
       {/* Mobile */}
       <div className="flex flex-col gap-3 sm:hidden">
-        {consignments.map(c => (
+        {filtered.map(c => (
           <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -134,7 +213,7 @@ export default function Consignments() {
             </div>
           </div>
         ))}
-        {consignments.length === 0 && (
+        {filtered.length === 0 && (
           <p className="text-center text-gray-400 text-sm py-8">No active consignments</p>
         )}
       </div>
@@ -152,7 +231,7 @@ export default function Consignments() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {consignments.map(c => (
+            {filtered.map(c => (
               <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
