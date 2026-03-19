@@ -14,7 +14,9 @@ export default function Consignments() {
   const navigate = useNavigate()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(false)
+  const [modal, setModal] = useState(false) // false | 'assign' | 'return'
+  const [returnTarget, setReturnTarget] = useState(null)
+  const [returnQty, setReturnQty] = useState(1)
   const [form, setForm] = useState({ freelancer_id: '', sku_id: '', quantity: 1 })
 
   useEffect(() => { load() }, [])
@@ -61,19 +63,39 @@ export default function Consignments() {
     load()
   }
 
-  async function returnStock(c) {
-    if (!confirm(`Return ${c.quantity} units from ${c.profiles?.name}?`)) return
+  function openReturn(c) {
+    setReturnTarget(c)
+    setReturnQty(c.quantity)
+    setModal('return')
+  }
+
+  async function confirmReturn() {
+    const c = returnTarget
+    const qty = parseInt(returnQty)
+    if (!c || qty <= 0 || qty > c.quantity) {
+      toast('Invalid quantity', 'error')
+      return
+    }
 
     // Return to inventory
     const sku = skus.find(s => s.id === c.sku_id)
     if (sku) {
       await supabase.from('skus').update({
-        quantity_available: sku.quantity_available + c.quantity
+        quantity_available: sku.quantity_available + qty
       }).eq('id', c.sku_id)
     }
 
-    await supabase.from('consignments').delete().eq('id', c.id)
-    toast('Stock returned to inventory')
+    // Update or delete consignment
+    const remaining = c.quantity - qty
+    if (remaining <= 0) {
+      await supabase.from('consignments').delete().eq('id', c.id)
+    } else {
+      await supabase.from('consignments').update({ quantity: remaining }).eq('id', c.id)
+    }
+
+    setModal(false)
+    setReturnTarget(null)
+    toast(`${qty} returned to inventory`)
     pop()
     load()
   }
@@ -84,7 +106,7 @@ export default function Consignments() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-4xl">Consignments</h1>
-        <button className="btn btn-primary btn-sm" onClick={() => setModal(true)}>
+        <button className="btn btn-primary btn-sm" onClick={() => setModal('assign')}>
           <Plus size={16} /> Assign Stock
         </button>
       </div>
@@ -107,7 +129,7 @@ export default function Consignments() {
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => returnStock(c)}><RotateCcw size={14} /> Return</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => openReturn(c)}><RotateCcw size={14} /> Return</button>
               <button className="btn btn-success btn-sm" onClick={() => navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`)}><ShoppingCart size={14} /> Sale</button>
             </div>
           </div>
@@ -147,7 +169,7 @@ export default function Consignments() {
                 <td className="px-6 py-4 text-sm text-gray-400">{new Date(c.created_at).toLocaleDateString()}</td>
                 <td className="px-6 py-4">
                   <div className="flex justify-end">
-                    <button className="btn btn-secondary btn-sm" onClick={() => returnStock(c)}><RotateCcw size={14} /> Return</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => openReturn(c)}><RotateCcw size={14} /> Return</button>
                     <button className="btn btn-success btn-sm" onClick={() => navigate(`/sales?freelancer=${c.freelancer_id}&sku=${c.sku_id}`)}><ShoppingCart size={14} /> Sale</button>
                   </div>
                 </td>
@@ -157,7 +179,7 @@ export default function Consignments() {
         </table>
       </div>
 
-      {modal && (
+      {modal === 'assign' && (
         <Modal title="Assign Stock to Freelancer" onClose={() => setModal(false)}>
           <div className="flex flex-col gap-3">
             <div>
@@ -186,6 +208,27 @@ export default function Consignments() {
                 onChange={e => setForm({ ...form, quantity: e.target.value })} />
             </div>
             <button className="btn btn-primary w-full mt-2" onClick={assign}>Assign</button>
+          </div>
+        </Modal>
+      )}
+
+      {modal === 'return' && returnTarget && (
+        <Modal title="Return Stock" onClose={() => { setModal(false); setReturnTarget(null) }}>
+          <div className="flex flex-col gap-3">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><p className="text-xs text-gray-400">Freelancer</p><p className="font-medium">{returnTarget.profiles?.name}</p></div>
+                <div><p className="text-xs text-gray-400">SKU</p><p className="font-medium">{returnTarget.skus?.name}</p></div>
+                <div><p className="text-xs text-gray-400">Currently Held</p><p className="font-medium">{returnTarget.quantity} pcs</p></div>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Quantity to Return</label>
+              <input type="number" min="1" max={returnTarget.quantity} className="input" value={returnQty}
+                onChange={e => setReturnQty(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">Max: {returnTarget.quantity}</p>
+            </div>
+            <button className="btn btn-primary w-full mt-2" onClick={confirmReturn}>Return Stock</button>
           </div>
         </Modal>
       )}

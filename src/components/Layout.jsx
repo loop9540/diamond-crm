@@ -1,8 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Package, Users, Building2, ArrowLeftRight,
-  ShoppingCart, BarChart3, LogOut, Gem, Menu, X
+  ShoppingCart, BarChart3, LogOut, Gem, Menu, X, KeyRound
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -23,6 +23,7 @@ const freelancerNav = [
 
 export default function Layout() {
   const { profile, signOut, isAdmin } = useAuth()
+  const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const nav = isAdmin ? adminNav : freelancerNav
 
@@ -40,8 +41,11 @@ export default function Layout() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">{profile?.name}</span>
+          <span className="text-sm text-gray-600 cursor-pointer hover:text-black transition-colors" onClick={() => navigate('/profile')}>{profile?.name}</span>
           <span className="badge badge-info text-[0.65rem]">{isAdmin ? 'Admin' : 'Freelancer'}</span>
+          <button onClick={() => navigate('/change-password')} className="p-1.5 rounded-lg hover:bg-white/50 transition-colors" title="Change password">
+            <KeyRound size={18} className="text-gray-400" />
+          </button>
           <button onClick={signOut} className="p-1.5 rounded-lg hover:bg-white/50 transition-colors" title="Sign out">
             <LogOut size={18} className="text-gray-400" />
           </button>

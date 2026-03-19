@@ -35,7 +35,7 @@ export default function Freelancers() {
 
   async function saveEdit() {
     await supabase.from('profiles').update({
-      name: form.name, phone: form.phone
+      name: form.name, email: form.email, phone: form.phone
     }).eq('id', editId)
     setModal(null)
     toast('Freelancer updated')
@@ -50,21 +50,29 @@ export default function Freelancers() {
 
   async function invite() {
     setInviteMsg('')
-    const { data, error } = await supabase.auth.signUp({
-      email: inviteForm.email,
-      password: inviteForm.password,
-    })
-    if (error) {
-      setInviteMsg(error.message)
+    // Use admin invite endpoint via Edge Function or direct admin API
+    // This creates the user without switching the admin's session
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/admin/users`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_KEY}`,
+        },
+        body: JSON.stringify({
+          email: inviteForm.email,
+          password: inviteForm.password,
+          email_confirm: true,
+          user_metadata: { name: inviteForm.name, role: 'freelancer' },
+        }),
+      }
+    )
+    const result = await res.json()
+    if (!res.ok) {
+      setInviteMsg(result.msg || result.message || 'Failed to create account')
       return
-    }
-    if (data.user) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email: inviteForm.email,
-        name: inviteForm.name,
-        role: 'freelancer',
-      })
     }
     setInviteMsg('Freelancer account created!')
     sparkle()
@@ -150,6 +158,10 @@ export default function Freelancers() {
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">Name</label>
               <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Email</label>
+              <input type="email" className="input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">Phone</label>

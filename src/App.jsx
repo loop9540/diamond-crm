@@ -11,6 +11,8 @@ import Sales from './pages/Sales'
 import Reports from './pages/Reports'
 import MyStock from './pages/MyStock'
 import MySales from './pages/MySales'
+import ChangePassword from './pages/ChangePassword'
+import Profile from './pages/Profile'
 import { ToastProvider } from './components/Toast'
 import { Loader2 } from 'lucide-react'
 
@@ -39,11 +41,15 @@ function AppRoutes() {
             <Route path="/consignments" element={<Consignments />} />
             <Route path="/sales" element={<Sales />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/profile" element={<Profile />} />
           </>
         ) : (
           <>
             <Route path="/" element={<MyStock />} />
             <Route path="/my-sales" element={<MySales />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/profile" element={<Profile />} />
           </>
         )}
         <Route path="*" element={<Navigate to="/" />} />

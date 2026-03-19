@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Loader from '../components/Loader'
-import { Package, Users, ShoppingCart, DollarSign, AlertCircle, ArrowLeftRight, Trophy, TrendingUp } from 'lucide-react'
+import { Package, Users, ShoppingCart, DollarSign, AlertCircle, ArrowLeftRight, Trophy } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
 function StatCard({ icon: Icon, label, value, color = 'sage', onClick }) {
   const colors = {
@@ -50,8 +51,47 @@ function getDateFrom(range) {
   return null
 }
 
+const MOTIVATIONS = [
+  "Every 'no' gets you closer to the next 'yes.' Keep pushing.",
+  "The best salespeople don't sell — they help people buy.",
+  "Your pipeline is your lifeline. Fill it daily.",
+  "People don't buy products. They buy better versions of themselves.",
+  "Follow up until they buy or die. Most sales happen after the 5th contact.",
+  "Sell the sparkle, not the stone. Sell the moment, not the metal.",
+  "A diamond doesn't start as a diamond — it starts under pressure. So do great deals.",
+  "Confidence closes deals. Know your product, own the room.",
+  "The fortune is in the follow-up. Did you call back today?",
+  "Stop selling features. Start selling feelings.",
+  "Every pair of earrings you sell is a memory someone will wear forever.",
+  "Hustle beats talent when talent doesn't hustle.",
+  "Your competitors are calling your leads right now. Are you?",
+  "Rejection is redirection. The right client is out there.",
+  "A sale is not something you pursue — it's what happens when you serve well.",
+  "Be so good they can't ignore you. Then follow up anyway.",
+  "Small daily improvements lead to staggering long-term results.",
+  "Today's effort is tomorrow's revenue. Make it count.",
+  "Diamonds are forever. So is the reputation you build with every sale.",
+  "The best time to close a deal was yesterday. The second best time is now.",
+]
+
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return { text: 'Good morning', emoji: '☀️' }
+  if (hour < 17) return { text: 'Good afternoon', emoji: '👋' }
+  if (hour < 21) return { text: 'Good evening', emoji: '🌅' }
+  return { text: 'Good night', emoji: '🌙' }
+}
+
+function getTodayMotivation() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000)
+  return MOTIVATIONS[dayOfYear % MOTIVATIONS.length]
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { profile } = useAuth()
+  const greeting = getGreeting()
+  const motivation = getTodayMotivation()
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState('all')
   const [allSales, setAllSales] = useState([])
@@ -127,8 +167,16 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-4xl">Dashboard</h1>
+      {/* Greeting */}
+      <div className="mb-6">
+        <h1 className="text-4xl mb-1">
+          {greeting.emoji} {greeting.text}, {profile?.name?.split(' ')[0] || 'there'}
+        </h1>
+        <p className="text-sm text-gray-400 italic mt-1">{motivation}</p>
+      </div>
+
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold" style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}>Overview</h2>
         <div className="flex gap-1 overflow-x-auto">
           {RANGES.map(r => (
             <button key={r.value}
