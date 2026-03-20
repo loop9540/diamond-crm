@@ -44,6 +44,25 @@ export default function Freelancers() {
     await supabase.from('profiles').update({
       name: form.name, email: form.email, phone: form.phone
     }).eq('id', editId)
+
+    // Sync email and name to auth user
+    await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/admin/users/${editId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_KEY}`,
+        },
+        body: JSON.stringify({
+          email: form.email,
+          email_confirm: true,
+          user_metadata: { name: form.name, role: 'freelancer' },
+        }),
+      }
+    )
+
     setModal(null)
     toast('Freelancer updated')
     load()
@@ -101,7 +120,7 @@ export default function Freelancers() {
           'apikey': import.meta.env.VITE_SUPABASE_SERVICE_KEY,
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_SERVICE_KEY}`,
         },
-        body: JSON.stringify({ password: newPassword }),
+        body: JSON.stringify({ password: newPassword, email_confirm: true }),
       }
     )
     if (!res.ok) {
