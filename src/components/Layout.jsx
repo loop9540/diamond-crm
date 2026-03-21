@@ -115,7 +115,7 @@ export default function Layout() {
         )}
 
         {/* Main content */}
-        <main className="flex-1 p-5 pb-8 sm:p-6 sm:pb-8 overflow-x-hidden page-enter">
+        <main className="flex-1 p-5 pb-8 sm:p-6 sm:pb-8 page-enter">
           <Outlet />
         </main>
       </div>

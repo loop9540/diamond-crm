@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export default function Modal({ title, onClose, children }) {
@@ -7,7 +8,7 @@ export default function Modal({ title, onClose, children }) {
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  return (
+  return createPortal(
     <div className="modal-backdrop">
       <div className="modal-content">
         <div className="flex items-center justify-between mb-4">
@@ -18,6 +19,7 @@ export default function Modal({ title, onClose, children }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

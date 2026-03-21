@@ -230,25 +230,22 @@ export default function Inventory() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50/80">
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Item</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">ID</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Color</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Clarity</th>
-              <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Cost</th>
-              <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Sell</th>
-              <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Margin</th>
-              <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Status</th>
-              <th className="px-6 py-4"></th>
+              <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Item</th>
+              <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">ID</th>
+              <th className="text-right px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Cost</th>
+              <th className="text-right px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Sell</th>
+              <th className="text-center px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Status</th>
+              <th className="px-4 py-4"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {skus.map(sku => (
               <tr key={sku.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
+                <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     {getThumb(sku.id) ? (
                       <img src={getThumb(sku.id)} className="w-10 h-10 rounded-lg object-cover cursor-pointer"
@@ -258,25 +255,25 @@ export default function Inventory() {
                         sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
                       }`}>{sku.gold_type}</div>
                     )}
-                    <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                    <div>
+                      <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                      {(sku.color || sku.clarity) && (
+                        <p className="text-[0.65rem] text-gray-400">{[sku.color, sku.clarity].filter(Boolean).join(' / ')}</p>
+                      )}
+                    </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-xs font-mono text-gray-500">{sku.item_id}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{sku.color || '—'}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{sku.clarity || '—'}</td>
-                <td className="px-6 py-4 text-sm text-gray-600 text-right">${sku.cost_price}</td>
-                <td className="px-6 py-4 text-sm text-gray-600 text-right">${sku.sell_price}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-emerald-600 text-right">
-                  ${((sku.sell_price||0)-(sku.cost_price||0)-(sku.flat_fee||0)).toFixed(0)}
-                </td>
-                <td className="px-6 py-4 text-center">
+                <td className="px-4 py-3 text-xs font-mono text-gray-500">{sku.item_id}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.cost_price}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.sell_price}</td>
+                <td className="px-4 py-3 text-center">
                   <span className={`badge text-xs ${STATUS_COLORS[sku.status] || STATUS_COLORS.available}`}>{sku.status}</span>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-3">
                   <div className="flex gap-1 justify-end">
                     <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => duplicate(sku)} title="Duplicate"><Copy size={16} /></button>
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(sku)}><Pencil size={16} /></button>
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(sku.id)}><Trash2 size={16} /></button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(sku)} title="Edit"><Pencil size={16} /></button>
+                    <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(sku.id)} title="Delete"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>

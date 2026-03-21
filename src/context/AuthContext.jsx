@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         fetchProfile(session.user.id)
         if (event === 'SIGNED_IN') {
-          supabase.rpc('increment_login_count', { user_id: session.user.id }).catch(() => {})
+          try { supabase.rpc('increment_login_count', { user_id: session.user.id }) } catch {}
         }
       } else {
         setProfile(null)
