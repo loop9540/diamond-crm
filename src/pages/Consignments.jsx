@@ -11,49 +11,40 @@ import { freelancerColor } from '../lib/colors'
 export default function Consignments() {
   const [consignments, setConsignments] = useState([])
   const [freelancers, setFreelancers] = useState([])
-  const [skus, setSkus] = useState([])
+  const [availableItems, setAvailableItems] = useState([])
   const navigate = useNavigate()
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ freelancer_id: '', sku_id: '', quantity: 1 })
+  const [form, setForm] = useState({ freelancer_id: '', sku_id: '' })
 
   useEffect(() => { load() }, [])
 
   async function load() {
     const [c, f, s] = await Promise.all([
-      supabase.from('consignments').select('*, profiles(name), skus(name, quantity_available)').order('created_at', { ascending: false }),
+      supabase.from('consignments').select('*, profiles(name), skus(item_id, name)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
-      supabase.from('skus').select('*').order('name'),
+      supabase.from('skus').select('*').eq('status', 'available').order('item_id'),
     ])
     setConsignments(c.data || [])
     setFreelancers(f.data || [])
-    setSkus(s.data || [])
+    setAvailableItems(s.data || [])
     setLoading(false)
   }
 
   async function assign() {
-    const qty = parseInt(form.quantity)
-    if (!form.freelancer_id || !form.sku_id || qty <= 0) return
-
-    const sku = skus.find(s => s.id === form.sku_id)
-    if (!sku || sku.quantity_available < qty) {
-      alert('Not enough stock available')
-      return
-    }
+    if (!form.freelancer_id || !form.sku_id) return
 
     await supabase.from('consignments').insert({
       freelancer_id: form.freelancer_id,
       sku_id: form.sku_id,
-      quantity: qty,
+      quantity: 1,
     })
 
-    await supabase.from('skus').update({
-      quantity_available: sku.quantity_available - qty
-    }).eq('id', form.sku_id)
+    await supabase.from('skus').update({ status: 'consigned' }).eq('id', form.sku_id)
 
     setModal(false)
-    setForm({ freelancer_id: '', sku_id: '', quantity: 1 })
+    setForm({ freelancer_id: '', sku_id: '' })
     toast('Stock assigned')
     assignBurst()
     load()
@@ -68,11 +59,9 @@ export default function Consignments() {
         freelancer_id: fid,
         name: c.profiles?.name || 'Unknown',
         items: [],
-        totalPieces: 0,
       }
     }
     grouped[fid].items.push(c)
-    grouped[fid].totalPieces += c.quantity
   }
   const freelancerGroups = Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name))
 
@@ -103,27 +92,22 @@ export default function Consignments() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">{g.name}</p>
-                    <p className="text-xs text-gray-400">{new Set(g.items.map(c => c.sku_id)).size} SKU{new Set(g.items.map(c => c.sku_id)).size !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-400">{g.items.length} item{g.items.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-[#5a6340]">{g.totalPieces}</p>
-                    <p className="text-[0.6rem] uppercase tracking-wider text-gray-400">pieces</p>
+                    <p className="text-2xl font-bold text-[#5a6340]">{g.items.length}</p>
+                    <p className="text-[0.6rem] uppercase tracking-wider text-gray-400">items</p>
                   </div>
                   <ChevronRight size={18} className="text-gray-300" />
                 </div>
               </div>
-              {/* SKU summary pills (combined by SKU) */}
+              {/* Item summary pills */}
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {Object.values(g.items.reduce((acc, c) => {
-                  const name = c.skus?.name || 'Unknown'
-                  if (!acc[name]) acc[name] = { name, qty: 0 }
-                  acc[name].qty += c.quantity
-                  return acc
-                }, {})).sort((a, b) => a.name.localeCompare(b.name)).map(s => (
-                  <span key={s.name} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-gray-50 text-gray-600">
-                    {s.name} <span className="font-semibold text-[#5a6340]">×{s.qty}</span>
+                {g.items.sort((a, b) => (a.skus?.item_id || '').localeCompare(b.skus?.item_id || '')).map(c => (
+                  <span key={c.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-gray-50 text-gray-600">
+                    <span className="font-semibold text-[#5a6340]">{c.skus?.item_id}</span> {c.skus?.name}
                   </span>
                 ))}
               </div>
@@ -151,21 +135,16 @@ export default function Consignments() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">SKU</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Item</label>
               <select className="input" value={form.sku_id}
                 onChange={e => setForm({ ...form, sku_id: e.target.value })}>
-                <option value="">Select SKU...</option>
-                {skus.map(s => (
+                <option value="">Select item...</option>
+                {availableItems.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.name} ({s.quantity_available} available)
+                    {s.item_id} — {s.name}
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Quantity</label>
-              <input type="number" min="1" className="input" value={form.quantity}
-                onChange={e => setForm({ ...form, quantity: e.target.value })} />
             </div>
             <button className="btn btn-primary w-full mt-2" onClick={assign}>Assign</button>
           </div>

@@ -14,14 +14,14 @@ export default function MySales() {
   async function load() {
     const { data } = await supabase
       .from('sales')
-      .select('*, skus(name, flat_fee), clients(name)')
+      .select('*, skus(name, flat_fee, item_id), clients(name)')
       .eq('freelancer_id', user.id)
       .order('created_at', { ascending: false })
     setSales(data || [])
   }
 
-  const totalSales = sales.reduce((s, r) => s + r.quantity, 0)
-  const totalFees = sales.reduce((s, r) => s + r.quantity * (r.skus?.flat_fee || 0), 0)
+  const totalSales = sales.length
+  const totalFees = sales.reduce((s, r) => s + (r.skus?.flat_fee || 0), 0)
 
   return (
     <div>
@@ -59,7 +59,7 @@ export default function MySales() {
               <div>
                 <p className="font-semibold text-sm">{s.skus?.name}</p>
                 <p className="text-xs text-gray-500">
-                  {s.client_type === 'individual' ? 'Individual' : s.clients?.name}
+                  {s.skus?.item_id} &middot; {s.client_type === 'individual' ? 'Individual' : s.clients?.name}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {new Date(s.created_at).toLocaleDateString()}
@@ -70,8 +70,7 @@ export default function MySales() {
                   {s.payment_status === 'paid' ? <CheckCircle size={12} className="mr-1" /> : <Clock size={12} className="mr-1" />}
                   {s.payment_status}
                 </span>
-                <p className="text-xs text-gray-500 mt-1">{s.quantity} pcs</p>
-                <p className="text-xs font-medium mt-0.5">Fee: ${(s.quantity * (s.skus?.flat_fee || 0)).toLocaleString()}</p>
+                <p className="text-xs font-medium mt-1">Fee: ${(s.skus?.flat_fee || 0).toLocaleString()}</p>
               </div>
             </div>
           </div>

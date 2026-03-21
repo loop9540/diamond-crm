@@ -21,7 +21,7 @@ export default function Sales() {
   const [editSale, setEditSale] = useState(null)
   const [form, setForm] = useState({
     freelancer_id: '', sku_id: '', client_type: 'individual',
-    client_id: '', quantity: 1, sale_price: '', payment_status: 'unpaid'
+    client_id: '', sale_price: '', payment_status: 'unpaid'
   })
   const [editForm, setEditForm] = useState({
     sale_price: '', payment_status: '', client_type: '', client_id: ''
@@ -44,7 +44,7 @@ export default function Sales() {
       const sku = skus.find(s => s.id === skuId)
       setForm({
         freelancer_id: freelancerId, sku_id: skuId, client_type: 'freelancer',
-        client_id: '', quantity: 1, sale_price: sku?.sell_price || '', payment_status: 'unpaid',
+        client_id: '', sale_price: sku?.sell_price || '', payment_status: 'unpaid',
       })
       setModal('new')
       setSearchParams({})
@@ -53,11 +53,11 @@ export default function Sales() {
 
   async function load() {
     const [s, f, sk, c, cn] = await Promise.all([
-      supabase.from('sales').select('*, profiles(name), skus(name, sell_price, flat_fee), clients(name)').order('created_at', { ascending: false }),
+      supabase.from('sales').select('*, profiles(name), skus(item_id, name, sell_price, flat_fee, status), clients(name)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
       supabase.from('skus').select('*').order('name'),
       supabase.from('clients').select('*').order('name'),
-      supabase.from('consignments').select('*'),
+      supabase.from('consignments').select('*, skus(id, item_id, name, sell_price, status)'),
     ])
     setSales(s.data || [])
     setFreelancers(f.data || [])
@@ -76,9 +76,10 @@ export default function Sales() {
     if (search) {
       const q = search.toLowerCase()
       const matchSku = s.skus?.name?.toLowerCase().includes(q)
+      const matchItemId = s.skus?.item_id?.toLowerCase().includes(q)
       const matchFreelancer = s.profiles?.name?.toLowerCase().includes(q)
       const matchClient = s.clients?.name?.toLowerCase().includes(q)
-      if (!matchSku && !matchFreelancer && !matchClient) return false
+      if (!matchSku && !matchItemId && !matchFreelancer && !matchClient) return false
     }
     return true
   })
@@ -90,26 +91,43 @@ export default function Sales() {
     setFilterDateFrom(''); setFilterDateTo('')
   }
 
+  // Items available for sale depending on client type
+  function getAvailableItems() {
+    if (form.client_type === 'freelancer') {
+      if (!form.freelancer_id) return []
+      return consignments
+        .filter(c => c.freelancer_id === form.freelancer_id && c.skus?.status === 'consigned')
+        .map(c => c.skus)
+        .filter(Boolean)
+    }
+    return skus.filter(s => s.status === 'available')
+  }
+
+  function onItemChange(skuId) {
+    const sku = skus.find(s => s.id === skuId)
+    setForm({ ...form, sku_id: skuId, sale_price: sku?.sell_price || '' })
+  }
+
   async function createSale() {
-    const qty = parseInt(form.quantity)
     const price = parseFloat(form.sale_price)
-    if (!form.sku_id || qty <= 0) return
+    if (!form.sku_id) return
 
     const isFreelancerSale = form.client_type === 'freelancer'
 
+    if (isFreelancerSale && !form.freelancer_id) return
+
     if (isFreelancerSale) {
-      if (!form.freelancer_id) return
       const consignment = consignments.find(
-        c => c.freelancer_id === form.freelancer_id && c.sku_id === form.sku_id && c.quantity >= qty
+        c => c.freelancer_id === form.freelancer_id && c.sku_id === form.sku_id
       )
       if (!consignment) {
-        toast('Freelancer does not have enough consigned stock', 'error')
+        toast('Item is not consigned to this freelancer', 'error')
         return
       }
     } else {
       const sku = skus.find(s => s.id === form.sku_id)
-      if (!sku || sku.quantity_available < qty) {
-        toast('Not enough stock available', 'error')
+      if (!sku || sku.status !== 'available') {
+        toast('Item is not available', 'error')
         return
       }
     }
@@ -119,23 +137,21 @@ export default function Sales() {
       sku_id: form.sku_id,
       client_type: form.client_type,
       client_id: form.client_type === 'store' ? form.client_id : null,
-      quantity: qty, sale_price: price, payment_status: form.payment_status,
+      quantity: 1, sale_price: price, payment_status: form.payment_status,
     })
 
+    // Update SKU status to sold
+    await supabase.from('skus').update({ status: 'sold' }).eq('id', form.sku_id)
+
+    // If freelancer sale, delete the consignment record
     if (isFreelancerSale) {
-      const consignment = consignments.find(
-        c => c.freelancer_id === form.freelancer_id && c.sku_id === form.sku_id && c.quantity >= qty
-      )
-      const newQty = consignment.quantity - qty
-      if (newQty <= 0) await supabase.from('consignments').delete().eq('id', consignment.id)
-      else await supabase.from('consignments').update({ quantity: newQty }).eq('id', consignment.id)
-    } else {
-      const sku = skus.find(s => s.id === form.sku_id)
-      await supabase.from('skus').update({ quantity_available: sku.quantity_available - qty }).eq('id', form.sku_id)
+      await supabase.from('consignments').delete()
+        .eq('freelancer_id', form.freelancer_id)
+        .eq('sku_id', form.sku_id)
     }
 
     setModal(false)
-    setForm({ freelancer_id: '', sku_id: '', client_type: 'individual', client_id: '', quantity: 1, sale_price: '', payment_status: 'unpaid' })
+    setForm({ freelancer_id: '', sku_id: '', client_type: 'individual', client_id: '', sale_price: '', payment_status: 'unpaid' })
     toast('Sale recorded successfully')
     saleCelebration()
     load()
@@ -167,13 +183,17 @@ export default function Sales() {
     if (!confirm('Delete this sale? Stock will be restored.')) return
 
     const isFreelancerSale = sale.client_type === 'freelancer' && sale.freelancer_id
+
+    // Restore SKU status
     if (isFreelancerSale) {
-      const existing = consignments.find(c => c.freelancer_id === sale.freelancer_id && c.sku_id === sale.sku_id)
-      if (existing) await supabase.from('consignments').update({ quantity: existing.quantity + sale.quantity }).eq('id', existing.id)
-      else await supabase.from('consignments').insert({ freelancer_id: sale.freelancer_id, sku_id: sale.sku_id, quantity: sale.quantity })
+      // Restore to consigned and recreate consignment record
+      await supabase.from('skus').update({ status: 'consigned' }).eq('id', sale.sku_id)
+      await supabase.from('consignments').insert({
+        freelancer_id: sale.freelancer_id, sku_id: sale.sku_id, quantity: 1
+      })
     } else {
-      const sku = skus.find(s => s.id === sale.sku_id)
-      if (sku) await supabase.from('skus').update({ quantity_available: sku.quantity_available + sale.quantity }).eq('id', sale.sku_id)
+      // Restore to available
+      await supabase.from('skus').update({ status: 'available' }).eq('id', sale.sku_id)
     }
 
     await supabase.from('sales').delete().eq('id', sale.id)
@@ -189,12 +209,9 @@ export default function Sales() {
     load()
   }
 
-  function onSkuChange(skuId) {
-    const sku = skus.find(s => s.id === skuId)
-    setForm({ ...form, sku_id: skuId, sale_price: sku?.sell_price || '' })
-  }
-
   if (loading) return <div className="mt-4"><Loader rows={4} /></div>
+
+  const availableItems = getAvailableItems()
 
   return (
     <div>
@@ -210,7 +227,7 @@ export default function Sales() {
         <div className="flex gap-2">
           <div className="flex-1 relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input pl-9" placeholder="Search SKU, freelancer, client..."
+            <input className="input pl-9" placeholder="Search item, freelancer, client..."
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <button className={`btn btn-sm ${showFilters ? 'btn-primary' : 'btn-secondary'}`}
@@ -270,8 +287,8 @@ export default function Sales() {
                 <div>
                   <p className="font-semibold text-sm">{s.skus?.name}</p>
                   <p className="text-xs text-gray-400">
-                    {s.profiles?.name ? `by ${s.profiles.name} · ` : ''}
-                    {s.client_type === 'individual' ? 'Individual' : s.clients?.name}
+                    <span className="font-mono">{s.skus?.item_id}</span>
+                    {s.profiles?.name ? ` · ${s.profiles.name}` : ''}
                   </p>
                 </div>
               </div>
@@ -282,8 +299,10 @@ export default function Sales() {
               </button>
             </div>
             <div className="flex items-center justify-between mt-3">
-              <span className="text-xs text-gray-400">{new Date(s.created_at).toLocaleDateString()} · {s.quantity} pcs × ${s.sale_price}</span>
-              <span className="font-bold text-sm text-gray-900">${(s.quantity * s.sale_price).toLocaleString()}</span>
+              <span className="text-xs text-gray-400">
+                {new Date(s.created_at).toLocaleDateString()} · {s.client_type === 'individual' ? 'Individual' : s.client_type === 'store' ? s.clients?.name : 'Freelancer'}
+              </span>
+              <span className="font-bold text-sm text-gray-900">${Number(s.sale_price).toLocaleString()}</span>
             </div>
             <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
               <button className="btn btn-secondary btn-sm flex-1" onClick={() => openEdit(s)}>
@@ -306,12 +325,11 @@ export default function Sales() {
           <thead>
             <tr className="bg-gray-50/80">
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Date</th>
-              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">SKU</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Item</th>
+              <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Item ID</th>
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Freelancer</th>
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Client</th>
-              <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Qty</th>
               <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Price</th>
-              <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Total</th>
               <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Status</th>
               <th className="px-6 py-4"></th>
             </tr>
@@ -321,13 +339,20 @@ export default function Sales() {
               <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-6 py-4 text-sm text-gray-400">{new Date(s.created_at).toLocaleDateString()}</td>
                 <td className="px-6 py-4 font-semibold text-gray-900 text-sm">{s.skus?.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{s.profiles?.name || '—'}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{s.client_type === 'individual' ? 'Individual' : s.clients?.name}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-bold bg-[#c3cca6]/20 text-[#5a6340]">{s.quantity}</span>
+                <td className="px-6 py-4 text-xs font-mono text-gray-500">{s.skus?.item_id}</td>
+                <td className="px-6 py-4 text-sm">
+                  {s.profiles?.name ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-md flex items-center justify-center text-white text-[0.6rem] font-bold"
+                        style={{ background: `linear-gradient(135deg, ${freelancerColor(s.profiles.name).from}, ${freelancerColor(s.profiles.name).to})` }}>
+                        {s.profiles.name.charAt(0)}
+                      </span>
+                      {s.profiles.name}
+                    </span>
+                  ) : '—'}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600 text-right">${s.sale_price}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">${(s.quantity * s.sale_price).toLocaleString()}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{s.client_type === 'individual' ? 'Individual' : s.clients?.name}</td>
+                <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">${Number(s.sale_price).toLocaleString()}</td>
                 <td className="px-6 py-4 text-center">
                   <button onClick={() => togglePayment(s)}
                     className={`badge cursor-pointer ${s.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>
@@ -386,31 +411,26 @@ export default function Sales() {
               </div>
             )}
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">SKU</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Item</label>
               {form.client_type === 'freelancer' ? (
-                <select className="input" value={form.sku_id} onChange={e => onSkuChange(e.target.value)} disabled={!form.freelancer_id}>
-                  <option value="">{form.freelancer_id ? 'Select...' : 'Pick a freelancer first'}</option>
-                  {consignments.filter(c => c.freelancer_id === form.freelancer_id && c.quantity > 0).map(c => {
-                    const sku = skus.find(s => s.id === c.sku_id)
-                    return sku ? <option key={c.id} value={sku.id}>{sku.name} ({c.quantity} available)</option> : null
-                  })}
+                <select className="input" value={form.sku_id} onChange={e => onItemChange(e.target.value)} disabled={!form.freelancer_id}>
+                  <option value="">{form.freelancer_id ? 'Select item...' : 'Pick a freelancer first'}</option>
+                  {availableItems.map(item => (
+                    <option key={item.id} value={item.id}>{item.item_id} — {item.name}</option>
+                  ))}
                 </select>
               ) : (
-                <select className="input" value={form.sku_id} onChange={e => onSkuChange(e.target.value)}>
-                  <option value="">Select...</option>
-                  {skus.filter(s => s.quantity_available > 0).map(s => <option key={s.id} value={s.id}>{s.name} ({s.quantity_available} in stock)</option>)}
+                <select className="input" value={form.sku_id} onChange={e => onItemChange(e.target.value)}>
+                  <option value="">Select item...</option>
+                  {availableItems.map(item => (
+                    <option key={item.id} value={item.id}>{item.item_id} — {item.name}</option>
+                  ))}
                 </select>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Quantity</label>
-                <input type="number" min="1" className="input" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Sale Price ($)</label>
-                <input type="number" step="0.01" className="input" value={form.sale_price} onChange={e => setForm({ ...form, sale_price: e.target.value })} />
-              </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Sale Price ($)</label>
+              <input type="number" step="0.01" className="input" value={form.sale_price} onChange={e => setForm({ ...form, sale_price: e.target.value })} />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">Payment</label>
@@ -430,8 +450,8 @@ export default function Sales() {
           <div className="flex flex-col gap-3">
             <div className="bg-gray-50 rounded-xl p-3">
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><p className="text-xs text-gray-400">SKU</p><p className="font-medium">{editSale.skus?.name}</p></div>
-                <div><p className="text-xs text-gray-400">Quantity</p><p className="font-medium">{editSale.quantity}</p></div>
+                <div><p className="text-xs text-gray-400">Item</p><p className="font-medium">{editSale.skus?.name}</p></div>
+                <div><p className="text-xs text-gray-400">Item ID</p><p className="font-medium font-mono">{editSale.skus?.item_id}</p></div>
                 {editSale.profiles?.name && <div><p className="text-xs text-gray-400">Freelancer</p><p className="font-medium">{editSale.profiles.name}</p></div>}
                 <div><p className="text-xs text-gray-400">Date</p><p className="font-medium">{new Date(editSale.created_at).toLocaleDateString()}</p></div>
               </div>

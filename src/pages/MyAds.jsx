@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
-import { Copy, Check, Megaphone, Download } from 'lucide-react'
+import { Copy, Check, Megaphone } from 'lucide-react'
 import { getAdTemplate } from './Settings'
 
 export default function MyAds() {
@@ -18,7 +18,7 @@ export default function MyAds() {
 
   async function load() {
     const [c, img] = await Promise.all([
-      supabase.from('consignments').select('*, skus(name, carat_size, gold_type, sell_price, color, clarity)').eq('freelancer_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('consignments').select('*, skus(name, carat_size, gold_type, sell_price, color, clarity, item_id, appraisal_url)').eq('freelancer_id', user.id).order('created_at', { ascending: false }),
       supabase.from('sku_images').select('*').order('position'),
     ])
     setConsignments(c.data || [])
@@ -31,16 +31,6 @@ export default function MyAds() {
     setImages(imgMap)
   }
 
-  // Group by SKU
-  const grouped = {}
-  for (const c of consignments) {
-    if (!grouped[c.sku_id]) {
-      grouped[c.sku_id] = { sku_id: c.sku_id, sku: c.skus, totalQty: 0 }
-    }
-    grouped[c.sku_id].totalQty += c.quantity
-  }
-  const skuGroups = Object.values(grouped).sort((a, b) => (a.sku?.name || '').localeCompare(b.sku?.name || ''))
-
   function generateAd(sku) {
     const template = getAdTemplate()
     return template
@@ -52,10 +42,10 @@ export default function MyAds() {
       .replace(/\{clarity\}/g, sku.clarity || '')
   }
 
-  async function copyAd(skuId, text) {
+  async function copyAd(consignmentId, text) {
     try {
       await navigator.clipboard.writeText(text)
-      setCopied(skuId)
+      setCopied(consignmentId)
       toast('Ad copied!')
       setTimeout(() => setCopied(null), 2000)
     } catch {
@@ -68,23 +58,25 @@ export default function MyAds() {
       <h1 className="text-4xl mb-4">My Ads</h1>
 
       <div className="flex flex-col gap-4">
-        {skuGroups.map(g => {
-          const ad = generateAd(g.sku)
-          const skuImages = images[g.sku_id] || []
+        {consignments.map(c => {
+          const ad = generateAd(c.skus)
+          const itemImages = images[c.sku_id] || []
           return (
-            <div key={g.sku_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="font-semibold text-gray-900">{g.sku?.name}</p>
-                  <p className="text-xs text-gray-400">{g.totalQty} in stock</p>
+                  <p className="font-semibold text-gray-900">{c.skus?.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {c.skus?.item_id} &middot; {c.skus?.color} / {c.skus?.clarity}
+                  </p>
                 </div>
-                <span className="text-lg font-bold text-[#5a6340]">${g.sku?.sell_price}</span>
+                <span className="text-lg font-bold text-[#5a6340]">${c.skus?.sell_price}</span>
               </div>
 
               {/* Images */}
-              {skuImages.length > 0 && (
+              {itemImages.length > 0 && (
                 <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
-                  {skuImages.map(img => (
+                  {itemImages.map(img => (
                     <a key={img.id} href={img.url} download target="_blank" rel="noopener noreferrer"
                       className="shrink-0">
                       <img src={img.url} className="w-20 h-20 rounded-xl object-cover border border-gray-100" />
@@ -101,9 +93,9 @@ export default function MyAds() {
 
               {/* Copy button */}
               <button
-                className={`btn w-full ${copied === g.sku_id ? 'btn-success' : 'btn-primary'}`}
-                onClick={() => copyAd(g.sku_id, ad)}>
-                {copied === g.sku_id ? (
+                className={`btn w-full ${copied === c.id ? 'btn-success' : 'btn-primary'}`}
+                onClick={() => copyAd(c.id, ad)}>
+                {copied === c.id ? (
                   <><Check size={16} /> Copied!</>
                 ) : (
                   <><Copy size={16} /> Copy Ad</>
@@ -114,7 +106,7 @@ export default function MyAds() {
         })}
       </div>
 
-      {skuGroups.length === 0 && (
+      {consignments.length === 0 && (
         <div className="text-center py-12">
           <Megaphone size={40} className="mx-auto text-gray-200 mb-3" />
           <p className="text-gray-400 text-sm">No stock to advertise</p>

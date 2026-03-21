@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
-import { Package, ShoppingCart, Copy, Check } from 'lucide-react'
+import { Package, ShoppingCart, Copy, Check, FileText } from 'lucide-react'
 import { saleCelebration } from '../lib/celebrate'
 import { getAdTemplate } from './Settings'
 
@@ -11,9 +11,9 @@ export default function MyStock() {
   const { user, profile } = useAuth()
   const toast = useToast()
   const [consignments, setConsignments] = useState([])
-  const [skus, setSkus] = useState([])
   const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({ sku_id: '', quantity: 1, sale_price: '' })
+  const [selectedItem, setSelectedItem] = useState(null)
+  const [salePrice, setSalePrice] = useState('')
   const [copied, setCopied] = useState(null)
 
   useEffect(() => {
@@ -21,26 +21,13 @@ export default function MyStock() {
   }, [user])
 
   async function load() {
-    const [c, s] = await Promise.all([
-      supabase.from('consignments').select('*, skus(name, carat_size, gold_type, sell_price, color, clarity)').eq('freelancer_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('skus').select('*').order('name'),
-    ])
-    setConsignments(c.data || [])
-    setSkus(s.data || [])
+    const { data } = await supabase
+      .from('consignments')
+      .select('*, skus(name, carat_size, gold_type, sell_price, color, clarity, appraisal_url, item_id)')
+      .eq('freelancer_id', user.id)
+      .order('created_at', { ascending: false })
+    setConsignments(data || [])
   }
-
-  // Group by SKU
-  const grouped = {}
-  for (const c of consignments) {
-    if (!grouped[c.sku_id]) {
-      grouped[c.sku_id] = { sku_id: c.sku_id, sku: c.skus, totalQty: 0, records: [] }
-    }
-    grouped[c.sku_id].totalQty += c.quantity
-    grouped[c.sku_id].records.push(c)
-  }
-  const skuGroups = Object.values(grouped).sort((a, b) => (a.sku?.name || '').localeCompare(b.sku?.name || ''))
-
-  const total = consignments.reduce((s, c) => s + c.quantity, 0)
 
   function generateAd(sku) {
     const template = getAdTemplate()
@@ -53,10 +40,10 @@ export default function MyStock() {
       .replace(/\{clarity\}/g, sku.clarity || '')
   }
 
-  async function copyAd(skuId, sku) {
+  async function copyAd(consignmentId, sku) {
     try {
       await navigator.clipboard.writeText(generateAd(sku))
-      setCopied(skuId)
+      setCopied(consignmentId)
       toast('Ad copied!')
       setTimeout(() => setCopied(null), 2000)
     } catch {
@@ -64,47 +51,34 @@ export default function MyStock() {
     }
   }
 
-  function openSale(group) {
-    setForm({ sku_id: group.sku_id, quantity: 1, sale_price: group.sku?.sell_price || '' })
+  function openSale(consignment) {
+    setSelectedItem(consignment)
+    setSalePrice(consignment.skus?.sell_price || '')
     setModal('sale')
   }
 
   async function reportSale() {
-    const qty = parseInt(form.quantity)
-    const price = parseFloat(form.sale_price)
-    if (!form.sku_id || qty <= 0 || !price) return
+    const price = parseFloat(salePrice)
+    if (!selectedItem || !price) return
 
-    const group = grouped[form.sku_id]
-    if (!group || group.totalQty < qty) {
-      toast('Not enough stock', 'error')
-      return
-    }
-
-    // Create sale — always unpaid, only admin can mark as paid
+    // Create sale with quantity=1
     await supabase.from('sales').insert({
       freelancer_id: user.id,
-      sku_id: form.sku_id,
+      sku_id: selectedItem.sku_id,
       client_type: 'freelancer',
-      quantity: qty,
+      quantity: 1,
       sale_price: price,
       payment_status: 'unpaid',
     })
 
-    // Deduct from consignment records (oldest first)
-    const sorted = [...group.records].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    let remaining = qty
-    for (const rec of sorted) {
-      if (remaining <= 0) break
-      if (remaining >= rec.quantity) {
-        await supabase.from('consignments').delete().eq('id', rec.id)
-        remaining -= rec.quantity
-      } else {
-        await supabase.from('consignments').update({ quantity: rec.quantity - remaining }).eq('id', rec.id)
-        remaining = 0
-      }
-    }
+    // Delete the consignment record
+    await supabase.from('consignments').delete().eq('id', selectedItem.id)
+
+    // Set SKU status to sold
+    await supabase.from('skus').update({ status: 'sold' }).eq('id', selectedItem.sku_id)
 
     setModal(false)
+    setSelectedItem(null)
     toast('Sale reported!')
     saleCelebration()
     load()
@@ -121,27 +95,34 @@ export default function MyStock() {
           </div>
           <div>
             <p className="text-xs text-gray-500">Total Items</p>
-            <p className="text-xl font-bold">{total}</p>
+            <p className="text-xl font-bold">{consignments.length}</p>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-3">
-        {skuGroups.map(g => (
-          <div key={g.sku_id} className="card">
+        {consignments.map(c => (
+          <div key={c.id} className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-sm">{g.sku?.name}</p>
+                <p className="font-semibold text-sm">{c.skus?.name}</p>
                 <p className="text-xs text-gray-500">
-                  {g.sku?.carat_size} / {g.sku?.gold_type} Gold
+                  {c.skus?.item_id} &middot; {c.skus?.carat_size} / {c.skus?.gold_type} Gold
+                </p>
+                <p className="text-xs text-gray-400">
+                  {c.skus?.color} / {c.skus?.clarity}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="badge badge-info text-lg px-4 py-1">{g.totalQty}</span>
-                <button className={`btn btn-sm ${copied === g.sku_id ? 'btn-success' : 'btn-secondary'}`} onClick={() => copyAd(g.sku_id, g.sku)}>
-                  {copied === g.sku_id ? <Check size={14} /> : <Copy size={14} />} {copied === g.sku_id ? 'Copied' : 'Ad'}
+                {c.skus?.appraisal_url && (
+                  <button className="btn btn-secondary btn-sm" onClick={() => window.open(c.skus.appraisal_url, '_blank')}>
+                    <FileText size={14} />
+                  </button>
+                )}
+                <button className={`btn btn-sm ${copied === c.id ? 'btn-success' : 'btn-secondary'}`} onClick={() => copyAd(c.id, c.skus)}>
+                  {copied === c.id ? <Check size={14} /> : <Copy size={14} />} {copied === c.id ? 'Copied' : 'Ad'}
                 </button>
-                <button className="btn btn-success btn-sm" onClick={() => openSale(g)}>
+                <button className="btn btn-success btn-sm" onClick={() => openSale(c)}>
                   <ShoppingCart size={14} /> Sell
                 </button>
               </div>
@@ -153,22 +134,19 @@ export default function MyStock() {
         )}
       </div>
 
-      {modal === 'sale' && (
+      {modal === 'sale' && selectedItem && (
         <Modal title="Report a Sale" onClose={() => setModal(false)}>
           <div className="flex flex-col gap-3">
             <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-sm font-medium">{grouped[form.sku_id]?.sku?.name}</p>
-              <p className="text-xs text-gray-400">Available: {grouped[form.sku_id]?.totalQty} pcs</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Quantity</label>
-              <input type="number" min="1" max={grouped[form.sku_id]?.totalQty} className="input" value={form.quantity}
-                onChange={e => setForm({ ...form, quantity: e.target.value })} />
+              <p className="text-sm font-medium">{selectedItem.skus?.name}</p>
+              <p className="text-xs text-gray-400">
+                {selectedItem.skus?.item_id} &middot; {selectedItem.skus?.color} / {selectedItem.skus?.clarity}
+              </p>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">Sale Price</label>
-              <input type="number" min="0" step="0.01" className="input" value={form.sale_price}
-                onChange={e => setForm({ ...form, sale_price: e.target.value })} />
+              <input type="number" min="0" step="0.01" className="input" value={salePrice}
+                onChange={e => setSalePrice(e.target.value)} />
             </div>
             <button className="btn btn-primary w-full mt-2" onClick={reportSale}>Report Sale</button>
           </div>

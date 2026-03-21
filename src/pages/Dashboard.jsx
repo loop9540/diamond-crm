@@ -104,11 +104,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const [inv, freelancers, sales, consignments] = await Promise.all([
-        supabase.from('skus').select('quantity_available'),
+      const [inv, consigned, freelancers, sales] = await Promise.all([
+        supabase.from('skus').select('id', { count: 'exact', head: true }).eq('status', 'available'),
+        supabase.from('skus').select('id', { count: 'exact', head: true }).eq('status', 'consigned'),
         supabase.from('profiles').select('id, name').eq('role', 'freelancer'),
         supabase.from('sales').select('quantity, sale_price, payment_status, created_at, freelancer_id, skus(flat_fee)'),
-        supabase.from('consignments').select('quantity'),
       ])
 
       const freelancerMap = {}
@@ -119,9 +119,9 @@ export default function Dashboard() {
       setAllSales(sales.data || [])
       setStats(prev => ({
         ...prev,
-        totalInventory: (inv.data || []).reduce((s, r) => s + (r.quantity_available || 0), 0),
+        totalInventory: inv.count || 0,
         freelancers: (freelancers.data || []).length,
-        consigned: (consignments.data || []).reduce((s, r) => s + (r.quantity || 0), 0),
+        consigned: consigned.count || 0,
         _freelancerMap: freelancerMap,
       }))
       setLoading(false)
