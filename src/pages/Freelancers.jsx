@@ -157,6 +157,7 @@ export default function Freelancers() {
                   <p className="font-semibold text-sm">{f.name}</p>
                   <p className="text-xs text-gray-400">{f.email}</p>
                   {f.phone && <p className="text-xs text-gray-400">{f.phone}</p>}
+                  <p className="text-xs text-gray-400">Logins: {f.login_count || 0}</p>
                 </div>
               </div>
               <div className="flex gap-1">
@@ -178,6 +179,7 @@ export default function Freelancers() {
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Name</th>
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Email</th>
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Phone</th>
+              <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Logins</th>
               <th className="px-6 py-4"></th>
             </tr>
           </thead>
@@ -195,6 +197,7 @@ export default function Freelancers() {
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{f.email}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{f.phone || '—'}</td>
+                <td className="px-6 py-4 text-center text-sm text-gray-600">{f.login_count || 0}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
                     <button className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => { impersonate(f); navigate('/') }} title="View as freelancer"><Eye size={16} /></button>
