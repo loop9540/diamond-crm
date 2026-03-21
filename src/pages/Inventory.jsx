@@ -9,7 +9,8 @@ import { getCaratSizes, getGoldTypes } from './Settings'
 
 const emptySku = {
   name: '', carat_size: '1ct', gold_type: 'WG',
-  cost_price: '', sell_price: '', flat_fee: '', quantity_available: 0
+  cost_price: '', sell_price: '', flat_fee: '', quantity_available: 0,
+  color: '', clarity: ''
 }
 
 export default function Inventory() {
@@ -297,6 +298,18 @@ export default function Inventory() {
               <label className="text-xs font-medium text-gray-500 mb-1 block">Display Name</label>
               <input className="input" value={form.name || autoName()}
                 onChange={e => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Color</label>
+                <input className="input" placeholder="e.g. D, E, F" value={form.color || ''}
+                  onChange={e => setForm({ ...form, color: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Clarity</label>
+                <input className="input" placeholder="e.g. VS1, VVS2" value={form.clarity || ''}
+                  onChange={e => setForm({ ...form, clarity: e.target.value })} />
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>

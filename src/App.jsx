@@ -12,6 +12,7 @@ import Sales from './pages/Sales'
 import Reports from './pages/Reports'
 import MyStock from './pages/MyStock'
 import MySales from './pages/MySales'
+import MyAds from './pages/MyAds'
 import ChangePassword from './pages/ChangePassword'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
@@ -52,6 +53,7 @@ function AppRoutes() {
           <>
             <Route path="/" element={<MyStock />} />
             <Route path="/my-sales" element={<MySales />} />
+            <Route path="/my-ads" element={<MyAds />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/profile" element={<Profile />} />
           </>

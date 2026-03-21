@@ -4,6 +4,18 @@ import { useToast } from '../components/Toast'
 
 const DEFAULT_CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct']
 const DEFAULT_GOLD_TYPES = ['WG', 'YG', 'RG']
+const DEFAULT_AD_TEMPLATE = `{name} - Diamond Ring
+💎 {carat} carat | {gold_type} Gold
+💰 \${price}
+
+Screw back backing.
+Authentic lab grown diamond. Perfect for any occasion!
+
+Comes with a jewellery box.
+
+Can meet at any public place or other location.
+
+Thank you 🙏🏻`
 
 export function getCaratSizes() {
   try {
@@ -21,12 +33,17 @@ export function getGoldTypes() {
   return DEFAULT_GOLD_TYPES
 }
 
+export function getAdTemplate() {
+  return localStorage.getItem('diamond-crm-ad-template') || DEFAULT_AD_TEMPLATE
+}
+
 export default function Settings() {
   const toast = useToast()
   const [caratSizes, setCaratSizes] = useState(getCaratSizes)
   const [goldTypes, setGoldTypes] = useState(getGoldTypes)
   const [newCarat, setNewCarat] = useState('')
   const [newGold, setNewGold] = useState('')
+  const [adTemplate, setAdTemplate] = useState(getAdTemplate)
 
   function addCarat() {
     const val = newCarat.trim()
@@ -113,6 +130,29 @@ export default function Settings() {
               <Plus size={14} /> Add
             </button>
           </div>
+        </div>
+      </div>
+      {/* Ad Template */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mt-6">
+        <h2 className="text-lg font-semibold mb-2">Ad Template</h2>
+        <p className="text-xs text-gray-400 mb-3">
+          Variables: <code className="bg-gray-100 px-1 rounded">{'{name}'}</code> <code className="bg-gray-100 px-1 rounded">{'{carat}'}</code> <code className="bg-gray-100 px-1 rounded">{'{gold_type}'}</code> <code className="bg-gray-100 px-1 rounded">{'{price}'}</code> <code className="bg-gray-100 px-1 rounded">{'{color}'}</code> <code className="bg-gray-100 px-1 rounded">{'{clarity}'}</code>
+        </p>
+        <textarea
+          className="input min-h-[160px] font-mono text-sm leading-relaxed"
+          value={adTemplate}
+          onChange={e => setAdTemplate(e.target.value)}
+        />
+        <div className="flex gap-2 mt-3">
+          <button className="btn btn-primary btn-sm" onClick={() => {
+            localStorage.setItem('diamond-crm-ad-template', adTemplate)
+            toast('Template saved')
+          }}>Save Template</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => {
+            setAdTemplate(DEFAULT_AD_TEMPLATE)
+            localStorage.removeItem('diamond-crm-ad-template')
+            toast('Template reset to default')
+          }}>Reset</button>
         </div>
       </div>
     </div>

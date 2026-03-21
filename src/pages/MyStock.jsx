@@ -3,8 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
-import { Package, ShoppingCart } from 'lucide-react'
+import { Package, ShoppingCart, Copy, Check } from 'lucide-react'
 import { saleCelebration } from '../lib/celebrate'
+import { getAdTemplate } from './Settings'
 
 export default function MyStock() {
   const { user, profile } = useAuth()
@@ -13,6 +14,7 @@ export default function MyStock() {
   const [skus, setSkus] = useState([])
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ sku_id: '', quantity: 1, sale_price: '' })
+  const [copied, setCopied] = useState(null)
 
   useEffect(() => {
     if (user) load()
@@ -20,7 +22,7 @@ export default function MyStock() {
 
   async function load() {
     const [c, s] = await Promise.all([
-      supabase.from('consignments').select('*, skus(name, carat_size, gold_type, sell_price)').eq('freelancer_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('consignments').select('*, skus(name, carat_size, gold_type, sell_price, color, clarity)').eq('freelancer_id', user.id).order('created_at', { ascending: false }),
       supabase.from('skus').select('*').order('name'),
     ])
     setConsignments(c.data || [])
@@ -39,6 +41,28 @@ export default function MyStock() {
   const skuGroups = Object.values(grouped).sort((a, b) => (a.sku?.name || '').localeCompare(b.sku?.name || ''))
 
   const total = consignments.reduce((s, c) => s + c.quantity, 0)
+
+  function generateAd(sku) {
+    const template = getAdTemplate()
+    return template
+      .replace(/\{name\}/g, sku.name || '')
+      .replace(/\{carat\}/g, sku.carat_size || '')
+      .replace(/\{gold_type\}/g, sku.gold_type || '')
+      .replace(/\{price\}/g, sku.sell_price?.toString() || '')
+      .replace(/\{color\}/g, sku.color || '')
+      .replace(/\{clarity\}/g, sku.clarity || '')
+  }
+
+  async function copyAd(skuId, sku) {
+    try {
+      await navigator.clipboard.writeText(generateAd(sku))
+      setCopied(skuId)
+      toast('Ad copied!')
+      setTimeout(() => setCopied(null), 2000)
+    } catch {
+      toast('Failed to copy', 'error')
+    }
+  }
 
   function openSale(group) {
     setForm({ sku_id: group.sku_id, quantity: 1, sale_price: group.sku?.sell_price || '' })
@@ -114,6 +138,9 @@ export default function MyStock() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="badge badge-info text-lg px-4 py-1">{g.totalQty}</span>
+                <button className={`btn btn-sm ${copied === g.sku_id ? 'btn-success' : 'btn-secondary'}`} onClick={() => copyAd(g.sku_id, g.sku)}>
+                  {copied === g.sku_id ? <Check size={14} /> : <Copy size={14} />} {copied === g.sku_id ? 'Copied' : 'Ad'}
+                </button>
                 <button className="btn btn-success btn-sm" onClick={() => openSale(g)}>
                   <ShoppingCart size={14} /> Sell
                 </button>

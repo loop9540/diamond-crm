@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, Package, Users, Building2, ArrowLeftRight,
-  ShoppingCart, BarChart3, LogOut, Gem, Menu, X, KeyRound, Settings
+  ShoppingCart, BarChart3, LogOut, Gem, Menu, X, KeyRound, Settings, Megaphone
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -20,6 +20,7 @@ const adminNav = [
 const freelancerNav = [
   { to: '/', icon: Package, label: 'My Stock' },
   { to: '/my-sales', icon: ShoppingCart, label: 'My Sales' },
+  { to: '/my-ads', icon: Megaphone, label: 'My Ads' },
 ]
 
 export default function Layout() {
