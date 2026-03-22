@@ -46,13 +46,20 @@ export default function Inventory() {
 
   async function load() {
     const [skuRes, imgRes, conRes, fRes] = await Promise.all([
-      supabase.from('skus').select('*').order('name').order('item_id'),
+      supabase.from('skus').select('*'),
       supabase.from('sku_images').select('*').order('position'),
       supabase.from('consignments').select('sku_id, freelancer_id, profiles(name)'),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
     ])
     setFreelancers(fRes.data || [])
-    setSkus(skuRes.data || [])
+    const sorted = (skuRes.data || []).sort((a, b) => {
+      const ca = parseFloat(a.carat_size) || 0
+      const cb = parseFloat(b.carat_size) || 0
+      if (ca !== cb) return ca - cb
+      if (a.gold_type !== b.gold_type) return a.gold_type.localeCompare(b.gold_type)
+      return (a.item_id || '').localeCompare(b.item_id || '')
+    })
+    setSkus(sorted)
 
     const conMap = {}
     const conFreelancerMap = {}
