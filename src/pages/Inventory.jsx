@@ -4,7 +4,7 @@ import Modal from '../components/Modal'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
-import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Copy } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { getCaratSizes, getGoldTypes } from './Settings'
 
 const STATUS_COLORS = {
@@ -33,15 +33,27 @@ export default function Inventory() {
   const fileRef = useRef()
   const appraisalRef = useRef()
   const [uploadingAppraisal, setUploadingAppraisal] = useState(false)
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterSize, setFilterSize] = useState('all')
 
   useEffect(() => { load() }, [])
 
+  const [consignedTo, setConsignedTo] = useState({}) // { sku_id: freelancer_name }
+
   async function load() {
-    const [skuRes, imgRes] = await Promise.all([
+    const [skuRes, imgRes, conRes] = await Promise.all([
       supabase.from('skus').select('*').order('name').order('item_id'),
       supabase.from('sku_images').select('*').order('position'),
+      supabase.from('consignments').select('sku_id, profiles(name)'),
     ])
     setSkus(skuRes.data || [])
+
+    const conMap = {}
+    for (const c of conRes.data || []) {
+      conMap[c.sku_id] = c.profiles?.name
+    }
+    setConsignedTo(conMap)
 
     const imgMap = {}
     for (const img of imgRes.data || []) {
@@ -83,14 +95,6 @@ export default function Inventory() {
     setModal(null)
     toast(modal === 'add' ? 'Item added' : 'Item updated')
     if (modal === 'add') sparkle()
-    load()
-  }
-
-  async function duplicate(sku) {
-    const { id, created_at, item_id, ...fields } = sku
-    await supabase.from('skus').insert({ ...fields, status: 'available', quantity_available: 1 })
-    toast('Item duplicated')
-    sparkle()
     load()
   }
 
@@ -183,6 +187,28 @@ export default function Inventory() {
     return images[skuId]?.[0]?.url || null
   }
 
+  const SIZE_FILTERS = [
+    { label: 'All', value: 'all' },
+    { label: 'Small (0.5–1ct)', value: 'small', match: s => parseFloat(s) <= 1 },
+    { label: 'Medium (1.5ct)', value: 'medium', match: s => { const v = parseFloat(s); return v > 1 && v <= 1.5 } },
+    { label: 'Large (2ct+)', value: 'large', match: s => parseFloat(s) > 1.5 },
+  ]
+
+  const filtered = skus.filter(sku => {
+    if (filterSize !== 'all') {
+      const sizeFilter = SIZE_FILTERS.find(f => f.value === filterSize)
+      if (sizeFilter && !sizeFilter.match(sku.carat_size)) return false
+    }
+    if (filterStatus !== 'all' && sku.status !== filterStatus) return false
+    if (search) {
+      const q = search.toLowerCase()
+      if (!sku.name?.toLowerCase().includes(q) && !sku.item_id?.toLowerCase().includes(q) && !sku.color?.toLowerCase().includes(q) && !sku.clarity?.toLowerCase().includes(q)) return false
+    }
+    return true
+  })
+
+  const hasFilters = filterStatus !== 'all' || filterSize !== 'all' || search
+
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
   return (
@@ -194,9 +220,44 @@ export default function Inventory() {
         </button>
       </div>
 
+      {/* Size filter buttons */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        {SIZE_FILTERS.map(f => (
+          <button key={f.value}
+            className={`btn btn-sm whitespace-nowrap ${filterSize === f.value ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setFilterSize(f.value)}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search & status filter */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative flex-1 min-w-[140px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
+          <input className="input pl-8 w-full" placeholder="Search ID, color, clarity..."
+            value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <select className="input w-auto" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <option value="all">All status</option>
+          <option value="available">Available</option>
+          <option value="consigned">Consigned</option>
+          <option value="sold">Sold</option>
+        </select>
+        {hasFilters && (
+          <button className="btn btn-sm btn-secondary text-red-500" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterSize('all') }}>
+            <X size={14} /> Clear
+          </button>
+        )}
+      </div>
+
+      {hasFilters && (
+        <p className="text-xs text-gray-400 mb-3">{filtered.length} of {skus.length} items</p>
+      )}
+
       {/* Mobile cards */}
       <div className="flex flex-col gap-3 sm:hidden">
-        {skus.map(sku => (
+        {filtered.map(sku => (
           <div key={sku.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
@@ -213,7 +274,7 @@ export default function Inventory() {
                   <p className="text-[0.65rem] text-gray-400 font-mono">{sku.item_id}</p>
                 </div>
               </div>
-              <span className={`badge text-xs ${STATUS_COLORS[sku.status] || STATUS_COLORS.available}`}>{sku.status}</span>
+              <span className={`badge text-xs ${STATUS_COLORS[sku.status] || STATUS_COLORS.available}`}>{sku.status === 'consigned' && consignedTo[sku.id] ? `→ ${consignedTo[sku.id]}` : sku.status}</span>
             </div>
             <div className="flex gap-5 text-xs text-gray-400 mb-3">
               <div><p className="font-semibold text-gray-700 text-sm">${sku.cost_price}</p>Cost</div>
@@ -222,12 +283,11 @@ export default function Inventory() {
             </div>
             <div className="flex gap-2">
               <button className="btn btn-secondary btn-sm flex-1" onClick={() => openEdit(sku)}><Pencil size={14} /> Edit</button>
-              <button className="btn btn-secondary btn-sm" onClick={() => duplicate(sku)}><Copy size={14} /></button>
-              <button className="btn btn-sm text-red-400 hover:text-red-600 hover:bg-red-50 bg-transparent border-0 px-3" onClick={() => remove(sku.id)}><Trash2 size={14} /></button>
+<button className="btn btn-sm text-red-400 hover:text-red-600 hover:bg-red-50 bg-transparent border-0 px-3" onClick={() => remove(sku.id)}><Trash2 size={14} /></button>
             </div>
           </div>
-        ))}
-      </div>
+            ))}
+          </div>
 
       {/* Desktop table */}
       <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
@@ -243,40 +303,39 @@ export default function Inventory() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {skus.map(sku => (
-              <tr key={sku.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    {getThumb(sku.id) ? (
-                      <img src={getThumb(sku.id)} className="w-10 h-10 rounded-lg object-cover cursor-pointer"
-                        onClick={() => setImageModal({ skuId: sku.id, index: 0 })} />
-                    ) : (
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-[0.65rem] font-bold ${
-                        sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
-                      }`}>{sku.gold_type}</div>
-                    )}
-                    <div>
-                      <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
-                      {(sku.color || sku.clarity) && (
-                        <p className="text-[0.65rem] text-gray-400">{[sku.color, sku.clarity].filter(Boolean).join(' / ')}</p>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-xs font-mono text-gray-500">{sku.item_id}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.cost_price}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.sell_price}</td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`badge text-xs ${STATUS_COLORS[sku.status] || STATUS_COLORS.available}`}>{sku.status}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1 justify-end">
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => duplicate(sku)} title="Duplicate"><Copy size={16} /></button>
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(sku)} title="Edit"><Pencil size={16} /></button>
-                    <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(sku.id)} title="Delete"><Trash2 size={16} /></button>
-                  </div>
-                </td>
-              </tr>
+            {filtered.map(sku => (
+                  <tr key={sku.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {getThumb(sku.id) ? (
+                          <img src={getThumb(sku.id)} className="w-10 h-10 rounded-lg object-cover cursor-pointer"
+                            onClick={() => setImageModal({ skuId: sku.id, index: 0 })} />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white text-[0.65rem] font-bold ${
+                            sku.gold_type === 'WG' || sku.gold_type === 'White' ? 'bg-gradient-to-br from-gray-400 to-gray-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'
+                          }`}>{sku.gold_type}</div>
+                        )}
+                        <div>
+                          <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                          {(sku.color || sku.clarity) && (
+                            <p className="text-[0.65rem] text-gray-400">{[sku.color, sku.clarity].filter(Boolean).join(' / ')}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs font-mono text-gray-500">{sku.item_id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.cost_price}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.sell_price}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`badge text-xs ${STATUS_COLORS[sku.status] || STATUS_COLORS.available}`}>{sku.status === 'consigned' && consignedTo[sku.id] ? `→ ${consignedTo[sku.id]}` : sku.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 justify-end">
+                        <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(sku)} title="Edit"><Pencil size={16} /></button>
+                        <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(sku.id)} title="Delete"><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
             ))}
           </tbody>
         </table>
