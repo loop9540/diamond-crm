@@ -36,24 +36,32 @@ export default function Inventory() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterSize, setFilterSize] = useState('all')
+  const [filterFreelancer, setFilterFreelancer] = useState('all')
+  const [freelancers, setFreelancers] = useState([])
 
   useEffect(() => { load() }, [])
 
-  const [consignedTo, setConsignedTo] = useState({}) // { sku_id: freelancer_name }
+  const [consignedTo, setConsignedTo] = useState({})
+  const [consignedToId, setConsignedToId] = useState({}) // { sku_id: freelancer_name }
 
   async function load() {
-    const [skuRes, imgRes, conRes] = await Promise.all([
+    const [skuRes, imgRes, conRes, fRes] = await Promise.all([
       supabase.from('skus').select('*').order('name').order('item_id'),
       supabase.from('sku_images').select('*').order('position'),
-      supabase.from('consignments').select('sku_id, profiles(name)'),
+      supabase.from('consignments').select('sku_id, freelancer_id, profiles(name)'),
+      supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
     ])
+    setFreelancers(fRes.data || [])
     setSkus(skuRes.data || [])
 
     const conMap = {}
+    const conFreelancerMap = {}
     for (const c of conRes.data || []) {
       conMap[c.sku_id] = c.profiles?.name
+      conFreelancerMap[c.sku_id] = c.freelancer_id
     }
     setConsignedTo(conMap)
+    setConsignedToId(conFreelancerMap)
 
     const imgMap = {}
     for (const img of imgRes.data || []) {
@@ -189,9 +197,9 @@ export default function Inventory() {
 
   const SIZE_FILTERS = [
     { label: 'All', value: 'all' },
-    { label: 'Small (0.5–1ct)', value: 'small', match: s => parseFloat(s) <= 1 },
-    { label: 'Medium (1.5ct)', value: 'medium', match: s => { const v = parseFloat(s); return v > 1 && v <= 1.5 } },
-    { label: 'Large (2ct+)', value: 'large', match: s => parseFloat(s) > 1.5 },
+    { label: 'Small (1.00–1.49ct)', value: 'small', match: s => { const v = parseFloat(s); return v >= 1 && v < 1.5 } },
+    { label: 'Medium (1.50–1.99ct)', value: 'medium', match: s => { const v = parseFloat(s); return v >= 1.5 && v < 2 } },
+    { label: 'Large (2ct+)', value: 'large', match: s => parseFloat(s) >= 2 },
   ]
 
   const filtered = skus.filter(sku => {
@@ -200,6 +208,7 @@ export default function Inventory() {
       if (sizeFilter && !sizeFilter.match(sku.carat_size)) return false
     }
     if (filterStatus !== 'all' && sku.status !== filterStatus) return false
+    if (filterFreelancer !== 'all' && consignedToId[sku.id] !== filterFreelancer) return false
     if (search) {
       const q = search.toLowerCase()
       if (!sku.name?.toLowerCase().includes(q) && !sku.item_id?.toLowerCase().includes(q) && !sku.color?.toLowerCase().includes(q) && !sku.clarity?.toLowerCase().includes(q)) return false
@@ -207,7 +216,7 @@ export default function Inventory() {
     return true
   })
 
-  const hasFilters = filterStatus !== 'all' || filterSize !== 'all' || search
+  const hasFilters = filterStatus !== 'all' || filterSize !== 'all' || filterFreelancer !== 'all' || search
 
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
@@ -244,8 +253,12 @@ export default function Inventory() {
           <option value="consigned">Consigned</option>
           <option value="sold">Sold</option>
         </select>
+        <select className="input w-auto" value={filterFreelancer} onChange={e => setFilterFreelancer(e.target.value)}>
+          <option value="all">All freelancers</option>
+          {freelancers.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+        </select>
         {hasFilters && (
-          <button className="btn btn-sm btn-secondary text-red-500" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterSize('all') }}>
+          <button className="btn btn-sm btn-secondary text-red-500" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterSize('all'); setFilterFreelancer('all') }}>
             <X size={14} /> Clear
           </button>
         )}
