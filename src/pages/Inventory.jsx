@@ -218,6 +218,16 @@ export default function Inventory() {
 
   const hasFilters = filterStatus !== 'all' || filterSize !== 'all' || filterFreelancer !== 'all' || search
 
+  // Summary by gold type within each size group
+  const goldSummary = {}
+  for (const sku of skus) {
+    const key = sku.gold_type
+    if (!goldSummary[key]) goldSummary[key] = { gold_type: key, available: 0, consigned: 0, sold: 0, total: 0, carats: [] }
+    goldSummary[key][sku.status] = (goldSummary[key][sku.status] || 0) + 1
+    goldSummary[key].total++
+    goldSummary[key].carats.push(sku.carat_size)
+  }
+
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
   return (
@@ -228,6 +238,36 @@ export default function Inventory() {
           <Plus size={16} /> Add Item
         </button>
       </div>
+
+      {/* Summary cards: one per size group per gold type */}
+      {SIZE_FILTERS.filter(f => f.value !== 'all').map(group => {
+        const groupSkus = skus.filter(sku => group.match(sku.carat_size))
+        if (groupSkus.length === 0) return null
+        const byGold = {}
+        for (const sku of groupSkus) {
+          const gt = sku.gold_type
+          if (!byGold[gt]) byGold[gt] = { available: 0, consigned: 0, sold: 0 }
+          byGold[gt][sku.status] = (byGold[gt][sku.status] || 0) + 1
+        }
+        const goldTypes = Object.entries(byGold).sort((a, b) => a[0].localeCompare(b[0]))
+        return (
+          <div key={group.value} className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">{group.label}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {goldTypes.map(([gt, counts]) => (
+                <div key={gt} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+                  <p className="font-semibold text-sm text-gray-900 mb-2">{gt === 'WG' ? 'White Gold' : gt === 'YG' ? 'Yellow Gold' : gt}</p>
+                  <div className="flex gap-3 text-xs">
+                    <div><span className="font-bold text-emerald-600">{counts.available}</span> <span className="text-gray-400">avail</span></div>
+                    <div><span className="font-bold text-amber-600">{counts.consigned}</span> <span className="text-gray-400">out</span></div>
+                    <div><span className="font-bold text-red-400">{counts.sold}</span> <span className="text-gray-400">sold</span></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
 
       {/* Size filter buttons */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
