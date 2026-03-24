@@ -235,6 +235,11 @@ export default function Inventory() {
     goldSummary[key].carats.push(sku.carat_size)
   }
 
+  const totalCost = skus.reduce((s, sku) => s + (parseFloat(sku.cost_price) || 0), 0)
+  const totalSell = skus.reduce((s, sku) => s + (parseFloat(sku.sell_price) || 0), 0)
+  const availableCost = skus.filter(s => s.status === 'available').reduce((s, sku) => s + (parseFloat(sku.cost_price) || 0), 0)
+  const availableSell = skus.filter(s => s.status === 'available').reduce((s, sku) => s + (parseFloat(sku.sell_price) || 0), 0)
+
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
   return (
@@ -244,6 +249,26 @@ export default function Inventory() {
         <button className="btn btn-primary btn-sm" onClick={openAdd}>
           <Plus size={16} /> Add Item
         </button>
+      </div>
+
+      {/* Total value */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="stat-card">
+          <p className="text-xs text-gray-500">Total Cost</p>
+          <p className="text-xl font-bold">${totalCost.toLocaleString()}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs text-gray-500">Total Sell</p>
+          <p className="text-xl font-bold">${totalSell.toLocaleString()}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs text-gray-500">Available Cost</p>
+          <p className="text-xl font-bold text-emerald-600">${availableCost.toLocaleString()}</p>
+        </div>
+        <div className="stat-card">
+          <p className="text-xs text-gray-500">Available Sell</p>
+          <p className="text-xl font-bold text-emerald-600">${availableSell.toLocaleString()}</p>
+        </div>
       </div>
 
       {/* Summary cards: one per size group per gold type */}
