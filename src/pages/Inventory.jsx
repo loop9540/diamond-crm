@@ -237,8 +237,8 @@ export default function Inventory() {
 
   const totalCost = skus.reduce((s, sku) => s + (parseFloat(sku.cost_price) || 0), 0)
   const totalSell = skus.reduce((s, sku) => s + (parseFloat(sku.sell_price) || 0), 0)
-  const availableCost = skus.filter(s => s.status === 'available').reduce((s, sku) => s + (parseFloat(sku.cost_price) || 0), 0)
-  const availableSell = skus.filter(s => s.status === 'available').reduce((s, sku) => s + (parseFloat(sku.sell_price) || 0), 0)
+  const consignedCost = skus.filter(s => s.status === 'consigned').reduce((s, sku) => s + (parseFloat(sku.cost_price) || 0), 0)
+  const consignedSell = skus.filter(s => s.status === 'consigned').reduce((s, sku) => s + (parseFloat(sku.sell_price) || 0), 0)
 
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
 
@@ -252,7 +252,7 @@ export default function Inventory() {
       </div>
 
       {/* Total value */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 gap-3 mb-5">
         <div className="stat-card">
           <p className="text-xs text-gray-500">Total Cost</p>
           <p className="text-xl font-bold">${totalCost.toLocaleString()}</p>
@@ -261,13 +261,13 @@ export default function Inventory() {
           <p className="text-xs text-gray-500">Total Sell</p>
           <p className="text-xl font-bold">${totalSell.toLocaleString()}</p>
         </div>
-        <div className="stat-card">
-          <p className="text-xs text-gray-500">Available Cost</p>
-          <p className="text-xl font-bold text-emerald-600">${availableCost.toLocaleString()}</p>
+<div className="stat-card">
+          <p className="text-xs text-gray-500">Consigned Cost</p>
+          <p className="text-xl font-bold text-amber-600">${consignedCost.toLocaleString()}</p>
         </div>
         <div className="stat-card">
-          <p className="text-xs text-gray-500">Available Sell</p>
-          <p className="text-xl font-bold text-emerald-600">${availableSell.toLocaleString()}</p>
+          <p className="text-xs text-gray-500">Consigned Sell</p>
+          <p className="text-xl font-bold text-amber-600">${consignedSell.toLocaleString()}</p>
         </div>
       </div>
 
