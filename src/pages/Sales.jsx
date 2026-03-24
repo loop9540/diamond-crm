@@ -110,7 +110,14 @@ export default function Sales() {
 
   async function createSale() {
     const price = parseFloat(form.sale_price)
-    if (!form.sku_id) return
+    if (!form.sku_id) {
+      toast('Please select an item', 'error')
+      return
+    }
+    if (!price || price <= 0) {
+      toast('Please enter a valid sale price', 'error')
+      return
+    }
 
     const isFreelancerSale = form.client_type === 'freelancer'
 

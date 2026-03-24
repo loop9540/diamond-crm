@@ -59,7 +59,11 @@ export default function MyStock() {
 
   async function reportSale() {
     const price = parseFloat(salePrice)
-    if (!selectedItem || !price) return
+    if (!selectedItem) return
+    if (!price || price <= 0) {
+      toast('Please enter a valid sale price', 'error')
+      return
+    }
 
     // Create sale with quantity=1
     await supabase.from('sales').insert({
