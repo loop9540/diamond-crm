@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast'
 import { Package, ShoppingCart, Copy, Check, FileText } from 'lucide-react'
 import { saleCelebration } from '../lib/celebrate'
 import { getAdTemplate } from './Settings'
+import { logAction } from '../lib/audit'
 
 export default function MyStock() {
   const { user, profile } = useAuth()
@@ -80,6 +81,8 @@ export default function MyStock() {
 
     // Set SKU status to sold
     await supabase.from('skus').update({ status: 'sold' }).eq('id', selectedItem.sku_id)
+
+    await logAction({ sku_id: selectedItem.sku_id, item_id: selectedItem.skus?.item_id, action: 'sold', actor_name: profile?.name, details: `Sold for $${price} by ${profile?.name} (unpaid)` })
 
     setModal(false)
     setSelectedItem(null)

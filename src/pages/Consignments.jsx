@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { assignBurst } from '../lib/celebrate'
+import { logAction } from '../lib/audit'
 import { freelancerColor } from '../lib/colors'
 
 export default function Consignments() {
@@ -42,6 +43,10 @@ export default function Consignments() {
     })
 
     await supabase.from('skus').update({ status: 'consigned' }).eq('id', form.sku_id)
+
+    const item = availableItems.find(s => s.id === form.sku_id)
+    const freelancer = freelancers.find(f => f.id === form.freelancer_id)
+    await logAction({ sku_id: form.sku_id, item_id: item?.item_id, action: 'assigned', details: `Assigned to ${freelancer?.name}` })
 
     setModal(false)
     setForm({ freelancer_id: '', sku_id: '' })

@@ -6,6 +6,7 @@ import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { pop } from '../lib/celebrate'
 import { freelancerColor } from '../lib/colors'
+import { logAction } from '../lib/audit'
 
 export default function ConsignmentDetail() {
   const { freelancerId } = useParams()
@@ -30,6 +31,7 @@ export default function ConsignmentDetail() {
   async function returnItem(consignment) {
     await supabase.from('consignments').delete().eq('id', consignment.id)
     await supabase.from('skus').update({ status: 'available' }).eq('id', consignment.sku_id)
+    await logAction({ sku_id: consignment.sku_id, item_id: consignment.skus?.item_id, action: 'returned', details: `Returned from ${freelancer?.name}` })
     toast('Item returned to inventory')
     pop()
     load()

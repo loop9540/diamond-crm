@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast'
 import { saleCelebration, moneyRain } from '../lib/celebrate'
 import { Plus, CheckCircle, Clock, Pencil, Trash2, Search, Filter, X } from 'lucide-react'
 import { freelancerColor } from '../lib/colors'
+import { logAction } from '../lib/audit'
 
 export default function Sales() {
   const toast = useToast()
@@ -157,6 +158,10 @@ export default function Sales() {
         .eq('sku_id', form.sku_id)
     }
 
+    const item = skus.find(s => s.id === form.sku_id)
+    const freelancer = isFreelancerSale ? freelancers.find(f => f.id === form.freelancer_id) : null
+    await logAction({ sku_id: form.sku_id, item_id: item?.item_id, action: 'sold', details: `Sold for $${price}${freelancer ? ` by ${freelancer.name}` : ''} (${form.payment_status})` })
+
     setModal(false)
     setForm({ freelancer_id: '', sku_id: '', client_type: 'individual', client_id: '', sale_price: '', payment_status: 'unpaid' })
     toast('Sale recorded successfully')
@@ -180,6 +185,9 @@ export default function Sales() {
       client_type: editForm.client_type,
       client_id: editForm.client_type === 'store' ? editForm.client_id : null,
     }).eq('id', editSale.id)
+    if (editForm.payment_status !== editSale.payment_status) {
+      await logAction({ sku_id: editSale.sku_id, item_id: editSale.skus?.item_id, action: editForm.payment_status === 'paid' ? 'payment_received' : 'payment_reverted', details: `Payment ${editForm.payment_status}` })
+    }
     setModal(false)
     setEditSale(null)
     toast('Sale updated')
@@ -204,6 +212,7 @@ export default function Sales() {
     }
 
     await supabase.from('sales').delete().eq('id', sale.id)
+    await logAction({ sku_id: sale.sku_id, item_id: sale.skus?.item_id, action: 'sale_deleted', details: `Sale deleted, stock restored` })
     toast('Sale deleted, stock restored')
     load()
   }
@@ -211,6 +220,7 @@ export default function Sales() {
   async function togglePayment(sale) {
     const newStatus = sale.payment_status === 'paid' ? 'unpaid' : 'paid'
     await supabase.from('sales').update({ payment_status: newStatus }).eq('id', sale.id)
+    await logAction({ sku_id: sale.sku_id, item_id: sale.skus?.item_id, action: newStatus === 'paid' ? 'payment_received' : 'payment_reverted', details: `Payment ${newStatus}` })
     toast(newStatus === 'paid' ? 'Marked as paid' : 'Marked as unpaid')
     if (newStatus === 'paid') moneyRain()
     load()

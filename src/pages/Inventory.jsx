@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
 import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { getCaratSizes, getGoldTypes } from './Settings'
+import { logAction } from '../lib/audit'
 
 const STATUS_COLORS = {
   available: 'bg-emerald-50 text-emerald-600',
@@ -27,6 +28,7 @@ export default function Inventory() {
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptySku)
   const [editId, setEditId] = useState(null)
+  const [auditLog, setAuditLog] = useState([])
   const [editImages, setEditImages] = useState([])
   const [uploading, setUploading] = useState(false)
   const [imageModal, setImageModal] = useState(null)
@@ -85,10 +87,12 @@ export default function Inventory() {
     setModal('add')
   }
 
-  function openEdit(sku) {
+  async function openEdit(sku) {
     setForm(sku)
     setEditId(sku.id)
     setEditImages(images[sku.id] || [])
+    const { data } = await supabase.from('audit_log').select('*').eq('sku_id', sku.id).order('created_at', { ascending: false })
+    setAuditLog(data || [])
     setModal('edit')
   }
 
@@ -102,7 +106,10 @@ export default function Inventory() {
     }
     if (modal === 'add') {
       const { id, created_at, item_id, ...rest } = payload
-      await supabase.from('skus').insert(rest)
+      const { data: inserted } = await supabase.from('skus').insert(rest).select().single()
+      if (inserted) {
+        await logAction({ sku_id: inserted.id, item_id: inserted.item_id, action: 'created', details: `${inserted.name} added to inventory` })
+      }
     } else {
       const { id, created_at, item_id, ...rest } = payload
       await supabase.from('skus').update(rest).eq('id', editId)
@@ -528,6 +535,27 @@ export default function Inventory() {
                   )}
                   <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={uploadImages} />
                 </label>
+              </div>
+            )}
+
+            {/* Audit log timeline - only show when editing */}
+            {modal === 'edit' && auditLog.length > 0 && (
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-2 block">History</label>
+                <div className="bg-gray-50 rounded-xl p-3 max-h-48 overflow-y-auto">
+                  {auditLog.map(log => (
+                    <div key={log.id} className="flex gap-3 pb-3 mb-3 border-b border-gray-100 last:border-0 last:pb-0 last:mb-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-700">{log.details || log.action}</p>
+                        <p className="text-[0.65rem] text-gray-400">
+                          {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {log.actor_name && ` — ${log.actor_name}`}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
