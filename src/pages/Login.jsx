@@ -11,11 +11,17 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState('login') // 'login' | 'reset'
   const [resetMsg, setResetMsg] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setLoading(true)
+    if (rememberMe) {
+      localStorage.setItem('diamond-crm-remember', 'true')
+    } else {
+      localStorage.removeItem('diamond-crm-remember')
+    }
     const { error } = await signIn(email, password)
     if (error) setError(error.message)
     setLoading(false)
@@ -59,6 +65,12 @@ export default function Login() {
               <input type="password" className="input" value={password}
                 onChange={e => setPassword(e.target.value)} placeholder="Your password" required />
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-[#c3cca6] accent-[#c3cca6]" />
+              <span className="text-xs text-gray-500">Remember me for 30 days</span>
+            </label>
 
             {error && <div className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</div>}
 

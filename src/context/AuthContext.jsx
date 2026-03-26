@@ -13,9 +13,23 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else setLoading(false)
+      if (session?.user) {
+        // Check if "Remember me" was used — if not, check if session is older than 24 hours
+        const remembered = localStorage.getItem('diamond-crm-remember')
+        if (!remembered) {
+          const sessionAge = Date.now() - new Date(session.user.last_sign_in_at).getTime()
+          const ONE_DAY = 24 * 60 * 60 * 1000
+          if (sessionAge > ONE_DAY) {
+            supabase.auth.signOut()
+            setLoading(false)
+            return
+          }
+        }
+        setUser(session.user)
+        fetchProfile(session.user.id)
+      } else {
+        setLoading(false)
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
