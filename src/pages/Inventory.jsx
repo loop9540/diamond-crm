@@ -493,12 +493,12 @@ export default function Inventory() {
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-2 block">Appraisal</label>
                 {form.appraisal_url ? (
-                  <div className="relative group">
-                    <img src={form.appraisal_url} className="w-full rounded-xl border border-gray-100 cursor-pointer"
+                  <div>
+                    <img src={form.appraisal_url} className="w-full rounded-xl border border-gray-100 cursor-pointer mb-2"
                       onClick={() => window.open(form.appraisal_url, '_blank')} />
                     <button onClick={removeAppraisal}
-                      className="absolute top-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X size={14} className="text-white" />
+                      className="btn btn-sm text-red-500 btn-secondary w-full">
+                      <Trash2 size={14} /> Remove Appraisal
                     </button>
                   </div>
                 ) : (
