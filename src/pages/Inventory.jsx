@@ -494,8 +494,15 @@ export default function Inventory() {
                 <label className="text-xs font-medium text-gray-500 mb-2 block">Appraisal</label>
                 {form.appraisal_url ? (
                   <div>
-                    <img src={form.appraisal_url} className="w-full rounded-xl border border-gray-100 cursor-pointer mb-2"
-                      onClick={() => window.open(form.appraisal_url, '_blank')} />
+                    {form.appraisal_url.toLowerCase().endsWith('.pdf') ? (
+                      <a href={form.appraisal_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100 text-sm text-[#5a6340] font-medium mb-2 hover:bg-gray-100 transition-colors">
+                        <Upload size={16} /> View Appraisal PDF
+                      </a>
+                    ) : (
+                      <img src={form.appraisal_url} className="w-full rounded-xl border border-gray-100 cursor-pointer mb-2"
+                        onClick={() => window.open(form.appraisal_url, '_blank')} />
+                    )}
                     <button onClick={removeAppraisal}
                       className="btn btn-sm text-red-500 btn-secondary w-full">
                       <Trash2 size={14} /> Remove Appraisal
@@ -506,7 +513,7 @@ export default function Inventory() {
                     {uploadingAppraisal ? <span className="text-sm text-gray-400">Uploading...</span> : (
                       <><Upload size={16} className="text-gray-400" /><span className="text-sm text-gray-500">Upload appraisal</span></>
                     )}
-                    <input ref={appraisalRef} type="file" accept="image/*" className="hidden" onChange={uploadAppraisal} />
+                    <input ref={appraisalRef} type="file" accept="image/*,.pdf" className="hidden" onChange={uploadAppraisal} />
                   </label>
                 )}
               </div>
@@ -519,10 +526,10 @@ export default function Inventory() {
                 {editImages.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mb-2">
                     {editImages.map(img => (
-                      <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-100">
+                      <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100">
                         <img src={img.url} className="w-full h-full object-cover" />
                         <button onClick={() => removeImage(img)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center">
                           <X size={12} className="text-white" />
                         </button>
                       </div>
