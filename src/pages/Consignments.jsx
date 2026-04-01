@@ -23,7 +23,7 @@ export default function Consignments() {
 
   async function load() {
     const [c, f, s] = await Promise.all([
-      supabase.from('consignments').select('*, profiles(name), skus(item_id, name)').order('created_at', { ascending: false }),
+      supabase.from('consignments').select('*, profiles(name), skus(item_id, name, sell_price)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
       supabase.from('skus').select('*').eq('status', 'available').order('item_id'),
     ])
@@ -85,6 +85,7 @@ export default function Consignments() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {freelancerGroups.map(g => {
           const color = freelancerColor(g.name)
+          const totalValue = g.items.reduce((s, c) => s + (parseFloat(c.skus?.sell_price) || 0), 0)
           return (
             <div key={g.freelancer_id}
               onClick={() => navigate(`/consignments/${g.freelancer_id}`)}
@@ -98,6 +99,7 @@ export default function Consignments() {
                   <div>
                     <p className="font-semibold text-gray-900">{g.name}</p>
                     <p className="text-xs text-gray-400">{g.items.length} item{g.items.length !== 1 ? 's' : ''}</p>
+                    <p className="text-sm font-bold text-[#5a6340]">${totalValue.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
