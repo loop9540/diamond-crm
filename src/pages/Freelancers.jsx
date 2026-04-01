@@ -17,6 +17,7 @@ export default function Freelancers() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [freelancers, setFreelancers] = useState([])
+  const [consignments, setConsignments] = useState([])
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
@@ -29,9 +30,19 @@ export default function Freelancers() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase.from('profiles').select('*').eq('role', 'freelancer').order('name')
-    setFreelancers(data || [])
+    const [p, c] = await Promise.all([
+      supabase.from('profiles').select('*').eq('role', 'freelancer').order('name'),
+      supabase.from('consignments').select('freelancer_id, skus(sell_price)'),
+    ])
+    setFreelancers(p.data || [])
+    setConsignments(c.data || [])
     setLoading(false)
+  }
+
+  // Calculate total consigned value per freelancer
+  const totalByFreelancer = {}
+  for (const c of consignments) {
+    totalByFreelancer[c.freelancer_id] = (totalByFreelancer[c.freelancer_id] || 0) + (parseFloat(c.skus?.sell_price) || 0)
   }
 
   function openEdit(f) {
@@ -158,6 +169,7 @@ export default function Freelancers() {
                   <p className="text-xs text-gray-400">{f.email}</p>
                   {f.phone && <p className="text-xs text-gray-400">{f.phone}</p>}
                   <p className="text-xs text-gray-400">Logins: {f.login_count || 0}</p>
+                  {totalByFreelancer[f.id] > 0 && <p className="text-sm font-bold text-[#5a6340]">${totalByFreelancer[f.id].toLocaleString()}</p>}
                 </div>
               </div>
               <div className="flex gap-1">
@@ -180,6 +192,7 @@ export default function Freelancers() {
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Email</th>
               <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Phone</th>
               <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Logins</th>
+              <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Cost of Goods</th>
               <th className="px-6 py-4"></th>
             </tr>
           </thead>
@@ -198,6 +211,7 @@ export default function Freelancers() {
                 <td className="px-6 py-4 text-sm text-gray-600">{f.email}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{f.phone || '—'}</td>
                 <td className="px-6 py-4 text-center text-sm text-gray-600">{f.login_count || 0}</td>
+                <td className="px-6 py-4 text-right text-sm font-bold text-[#5a6340]">{totalByFreelancer[f.id] ? `$${totalByFreelancer[f.id].toLocaleString()}` : '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-1 justify-end">
                     <button className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" onClick={() => { impersonate(f); navigate('/') }} title="View as freelancer"><Eye size={16} /></button>
