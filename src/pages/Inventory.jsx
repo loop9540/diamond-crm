@@ -39,7 +39,7 @@ export default function Inventory() {
   const [sellItem, setSellItem] = useState(null)
   const [sellPrice, setSellPrice] = useState('')
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('available')
   const [filterSize, setFilterSize] = useState('all')
   const [filterFreelancer, setFilterFreelancer] = useState('all')
   const [freelancers, setFreelancers] = useState([])
