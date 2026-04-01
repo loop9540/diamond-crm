@@ -4,9 +4,10 @@ import Modal from '../components/Modal'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
-import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search, ShoppingCart } from 'lucide-react'
 import { getCaratSizes, getGoldTypes } from './Settings'
 import { logAction } from '../lib/audit'
+import { saleCelebration } from '../lib/celebrate'
 
 const STATUS_COLORS = {
   available: 'bg-emerald-50 text-emerald-600',
@@ -35,6 +36,8 @@ export default function Inventory() {
   const fileRef = useRef()
   const appraisalRef = useRef()
   const [uploadingAppraisal, setUploadingAppraisal] = useState(false)
+  const [sellItem, setSellItem] = useState(null)
+  const [sellPrice, setSellPrice] = useState('')
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterSize, setFilterSize] = useState('all')
@@ -117,6 +120,39 @@ export default function Inventory() {
     setModal(null)
     toast(modal === 'add' ? 'Item added' : 'Item updated')
     if (modal === 'add') sparkle()
+    load()
+  }
+
+  function openSell(sku) {
+    setSellItem(sku)
+    setSellPrice(sku.sell_price || '')
+    setModal('sell')
+  }
+
+  async function confirmSell() {
+    const price = parseFloat(sellPrice)
+    if (!sellItem) return
+    if (!price || price <= 0) {
+      toast('Please enter a valid sale price', 'error')
+      return
+    }
+
+    await supabase.from('sales').insert({
+      freelancer_id: null,
+      sku_id: sellItem.id,
+      client_type: 'individual',
+      quantity: 1,
+      sale_price: price,
+      payment_status: 'unpaid',
+    })
+
+    await supabase.from('skus').update({ status: 'sold' }).eq('id', sellItem.id)
+    await logAction({ sku_id: sellItem.id, item_id: sellItem.item_id, action: 'sold', details: `Sold for $${price} (direct sale)` })
+
+    setModal(null)
+    setSellItem(null)
+    toast('Sale recorded')
+    saleCelebration()
     load()
   }
 
@@ -374,8 +410,11 @@ export default function Inventory() {
               <div className="ml-auto"><p className="font-semibold text-emerald-600 text-sm">${((sku.sell_price||0)-(sku.cost_price||0)-(sku.flat_fee||0)).toFixed(0)}</p>Margin</div>
             </div>
             <div className="flex gap-2">
+              {sku.status === 'available' && (
+                <button className="btn btn-success btn-sm" onClick={() => openSell(sku)}><ShoppingCart size={14} /> Sell</button>
+              )}
               <button className="btn btn-secondary btn-sm flex-1" onClick={() => openEdit(sku)}><Pencil size={14} /> Edit</button>
-<button className="btn btn-sm text-red-400 hover:text-red-600 hover:bg-red-50 bg-transparent border-0 px-3" onClick={() => remove(sku.id)}><Trash2 size={14} /></button>
+              <button className="btn btn-sm text-red-400 hover:text-red-600 hover:bg-red-50 bg-transparent border-0 px-3" onClick={() => remove(sku.id)}><Trash2 size={14} /></button>
             </div>
           </div>
             ))}
@@ -423,6 +462,9 @@ export default function Inventory() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1 justify-end">
+                        {sku.status === 'available' && (
+                          <button className="p-2 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" onClick={() => openSell(sku)} title="Sell"><ShoppingCart size={16} /></button>
+                        )}
                         <button className="p-2 rounded-lg text-gray-400 hover:text-[#5a6340] hover:bg-[#c3cca6]/20 transition-colors" onClick={() => openEdit(sku)} title="Edit"><Pencil size={16} /></button>
                         <button className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" onClick={() => remove(sku.id)} title="Delete"><Trash2 size={16} /></button>
                       </div>
@@ -433,8 +475,26 @@ export default function Inventory() {
         </table>
       </div>
 
+      {/* Sell Modal */}
+      {modal === 'sell' && sellItem && (
+        <Modal title={`Sell ${sellItem.item_id}`} onClose={() => { setModal(null); setSellItem(null) }}>
+          <div className="flex flex-col gap-3">
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-sm font-medium">{sellItem.name}</p>
+              <p className="text-xs text-gray-400">{sellItem.item_id}{sellItem.color || sellItem.clarity ? ` · ${[sellItem.color, sellItem.clarity].filter(Boolean).join(' / ')}` : ''}</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Sale Price</label>
+              <input type="number" min="0" step="0.01" className="input" value={sellPrice}
+                onChange={e => setSellPrice(e.target.value)} />
+            </div>
+            <button className="btn btn-primary w-full mt-2" onClick={confirmSell}>Record Sale</button>
+          </div>
+        </Modal>
+      )}
+
       {/* Edit/Add Modal */}
-      {modal && (
+      {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Item' : `Edit ${form.item_id || 'Item'}`} onClose={() => setModal(null)}>
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
