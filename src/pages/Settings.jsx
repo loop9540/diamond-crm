@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import { useToast } from '../components/Toast'
 
-const DEFAULT_CARAT_SIZES = ['0.5ct', '0.75ct', '1ct', '1.5ct', '2ct', '3ct']
+const DEFAULT_CARAT_SIZES = Array.from({ length: 951 }, (_, i) => {
+  const val = (i + 50) / 100
+  return parseFloat(val.toFixed(2)) + 'ct'
+})
 const DEFAULT_GOLD_TYPES = ['WG', 'YG', 'RG']
 const DEFAULT_AD_TEMPLATE = `{name} - Diamond Ring
 💎 {carat} carat | {gold_type} Gold
