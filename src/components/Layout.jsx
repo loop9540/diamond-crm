@@ -48,7 +48,7 @@ export default function Layout() {
           <button className="sm:hidden p-1" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
             <Gem size={20} className="text-[#5a6340]" />
             <span className="text-xl hidden sm:inline" style={{ fontFamily: "'Instrument Sans', sans-serif" }}>My Diamonds Shop</span>
           </div>
