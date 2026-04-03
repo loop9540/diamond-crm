@@ -15,17 +15,16 @@ export default function Sales() {
   const [sales, setSales] = useState([])
   const [freelancers, setFreelancers] = useState([])
   const [skus, setSkus] = useState([])
-  const [clients, setClients] = useState([])
   const [consignments, setConsignments] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [editSale, setEditSale] = useState(null)
   const [form, setForm] = useState({
     freelancer_id: '', sku_id: '', client_type: 'individual',
-    client_id: '', sale_price: '', payment_status: 'unpaid'
+    sale_price: '', payment_status: 'unpaid'
   })
   const [editForm, setEditForm] = useState({
-    sale_price: '', payment_status: '', client_type: '', client_id: ''
+    sale_price: '', payment_status: ''
   })
 
   // Filters
@@ -53,17 +52,15 @@ export default function Sales() {
   }, [searchParams, skus])
 
   async function load() {
-    const [s, f, sk, c, cn] = await Promise.all([
-      supabase.from('sales').select('*, profiles(name), skus(item_id, name, sell_price, flat_fee, status), clients(name)').order('created_at', { ascending: false }),
+    const [s, f, sk, cn] = await Promise.all([
+      supabase.from('sales').select('*, profiles(name), skus(item_id, name, sell_price, flat_fee, status)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
       supabase.from('skus').select('*').order('name'),
-      supabase.from('clients').select('*').order('name'),
       supabase.from('consignments').select('*, skus(id, item_id, name, sell_price, status)'),
     ])
     setSales(s.data || [])
     setFreelancers(f.data || [])
     setSkus(sk.data || [])
-    setClients(c.data || [])
     setConsignments(cn.data || [])
     setLoading(false)
   }
@@ -79,8 +76,7 @@ export default function Sales() {
       const matchSku = s.skus?.name?.toLowerCase().includes(q)
       const matchItemId = s.skus?.item_id?.toLowerCase().includes(q)
       const matchFreelancer = s.profiles?.name?.toLowerCase().includes(q)
-      const matchClient = s.clients?.name?.toLowerCase().includes(q)
-      if (!matchSku && !matchItemId && !matchFreelancer && !matchClient) return false
+      if (!matchSku && !matchItemId && !matchFreelancer) return false
     }
     return true
   })
@@ -144,7 +140,6 @@ export default function Sales() {
       freelancer_id: isFreelancerSale ? form.freelancer_id : null,
       sku_id: form.sku_id,
       client_type: form.client_type,
-      client_id: form.client_type === 'store' ? form.client_id : null,
       quantity: 1, sale_price: price, payment_status: form.payment_status,
     })
 
@@ -163,7 +158,7 @@ export default function Sales() {
     await logAction({ sku_id: form.sku_id, item_id: item?.item_id, action: 'sold', details: `Sold for $${price}${freelancer ? ` by ${freelancer.name}` : ''} (${form.payment_status})` })
 
     setModal(false)
-    setForm({ freelancer_id: '', sku_id: '', client_type: 'individual', client_id: '', sale_price: '', payment_status: 'unpaid' })
+    setForm({ freelancer_id: '', sku_id: '', client_type: 'individual', sale_price: '', payment_status: 'unpaid' })
     toast('Sale recorded successfully')
     saleCelebration()
     load()
@@ -173,7 +168,7 @@ export default function Sales() {
     setEditSale(sale)
     setEditForm({
       sale_price: sale.sale_price, payment_status: sale.payment_status,
-      client_type: sale.client_type, client_id: sale.client_id || '',
+      client_type: sale.client_type,
     })
     setModal('edit')
   }
@@ -183,7 +178,6 @@ export default function Sales() {
       sale_price: parseFloat(editForm.sale_price) || 0,
       payment_status: editForm.payment_status,
       client_type: editForm.client_type,
-      client_id: editForm.client_type === 'store' ? editForm.client_id : null,
     }).eq('id', editSale.id)
     if (editForm.payment_status !== editSale.payment_status) {
       await logAction({ sku_id: editSale.sku_id, item_id: editSale.skus?.item_id, action: editForm.payment_status === 'paid' ? 'payment_received' : 'payment_reverted', details: `Payment ${editForm.payment_status}` })
@@ -317,7 +311,7 @@ export default function Sales() {
             </div>
             <div className="flex items-center justify-between mt-3">
               <span className="text-xs text-gray-400">
-                {new Date(s.created_at).toLocaleDateString()} · {s.client_type === 'individual' ? 'Individual' : s.client_type === 'store' ? s.clients?.name : 'Freelancer'}
+                {new Date(s.created_at).toLocaleDateString()} · {s.client_type === 'freelancer' ? 'Freelancer' : 'Individual'}
               </span>
               <span className="font-bold text-sm text-gray-900">${Number(s.sale_price).toLocaleString()}</span>
             </div>
@@ -368,7 +362,7 @@ export default function Sales() {
                     </span>
                   ) : '—'}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{s.client_type === 'individual' ? 'Individual' : s.clients?.name}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{s.client_type === 'freelancer' ? 'Freelancer' : 'Individual'}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">${Number(s.sale_price).toLocaleString()}</td>
                 <td className="px-6 py-4 text-center">
                   <button onClick={() => togglePayment(s)}
@@ -400,23 +394,13 @@ export default function Sales() {
         <Modal title="Record Sale" onClose={() => setModal(false)}>
           <div className="flex flex-col gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Client Type</label>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Sale Type</label>
               <select className="input" value={form.client_type}
-                onChange={e => setForm({ ...form, client_type: e.target.value, client_id: '', freelancer_id: '', sku_id: '', sale_price: '' })}>
-                <option value="individual">Individual</option>
-                <option value="store">Store</option>
-                <option value="freelancer">Freelancer</option>
+                onChange={e => setForm({ ...form, client_type: e.target.value, freelancer_id: '', sku_id: '', sale_price: '' })}>
+                <option value="individual">Direct Sale</option>
+                <option value="freelancer">Freelancer Sale</option>
               </select>
             </div>
-            {form.client_type === 'store' && (
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Store</label>
-                <select className="input" value={form.client_id} onChange={e => setForm({ ...form, client_id: e.target.value })}>
-                  <option value="">Select...</option>
-                  {clients.filter(c => c.type === 'store').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-            )}
             {form.client_type === 'freelancer' && (
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Freelancer</label>
@@ -484,23 +468,6 @@ export default function Sales() {
                 <option value="paid">Paid</option>
               </select>
             </div>
-            <div>
-              <label className="text-xs font-medium text-gray-500 mb-1 block">Client Type</label>
-              <select className="input" value={editForm.client_type} onChange={e => setEditForm({ ...editForm, client_type: e.target.value, client_id: '' })}>
-                <option value="individual">Individual</option>
-                <option value="store">Store</option>
-                <option value="freelancer">Freelancer</option>
-              </select>
-            </div>
-            {editForm.client_type === 'store' && (
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1 block">Store</label>
-                <select className="input" value={editForm.client_id} onChange={e => setEditForm({ ...editForm, client_id: e.target.value })}>
-                  <option value="">Select...</option>
-                  {clients.filter(c => c.type === 'store').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-            )}
             <div className="flex gap-2 mt-2">
               <button className="btn btn-primary flex-1" onClick={saveEdit}>Save Changes</button>
               <button className="btn btn-danger" onClick={() => { setModal(false); deleteSale(editSale) }}><Trash2 size={16} /> Delete</button>

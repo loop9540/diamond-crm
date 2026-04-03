@@ -5,7 +5,6 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
 import Freelancers from './pages/Freelancers'
-import Clients from './pages/Clients'
 import Consignments from './pages/Consignments'
 import ConsignmentDetail from './pages/ConsignmentDetail'
 import Sales from './pages/Sales'
@@ -41,7 +40,6 @@ function AppRoutes() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/freelancers" element={<Freelancers />} />
-            <Route path="/clients" element={<Clients />} />
             <Route path="/consignments" element={<Consignments />} />
             <Route path="/consignments/:freelancerId" element={<ConsignmentDetail />} />
             <Route path="/sales" element={<Sales />} />

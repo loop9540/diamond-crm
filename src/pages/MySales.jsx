@@ -14,7 +14,7 @@ export default function MySales() {
   async function load() {
     const { data } = await supabase
       .from('sales')
-      .select('*, skus(name, flat_fee, item_id), clients(name)')
+      .select('*, skus(name, flat_fee, item_id)')
       .eq('freelancer_id', user.id)
       .order('created_at', { ascending: false })
     setSales(data || [])
@@ -59,7 +59,7 @@ export default function MySales() {
               <div>
                 <p className="font-semibold text-sm">{s.skus?.name}</p>
                 <p className="text-xs text-gray-500">
-                  {s.skus?.item_id} &middot; {s.client_type === 'individual' ? 'Individual' : s.clients?.name}
+                  {s.skus?.item_id}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {new Date(s.created_at).toLocaleDateString()}

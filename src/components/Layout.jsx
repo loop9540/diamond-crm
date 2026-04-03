@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
-  LayoutDashboard, Package, Users, Building2, ArrowLeftRight,
+  LayoutDashboard, Package, Users, ArrowLeftRight,
   ShoppingCart, BarChart3, LogOut, Gem, Menu, X, KeyRound, Settings, Megaphone, HelpCircle
 } from 'lucide-react'
 import { useState } from 'react'
@@ -10,7 +10,6 @@ const adminNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/inventory', icon: Package, label: 'Inventory' },
   { to: '/freelancers', icon: Users, label: 'Freelancers' },
-  { to: '/clients', icon: Building2, label: 'Clients' },
   { to: '/consignments', icon: ArrowLeftRight, label: 'Consignments' },
   { to: '/sales', icon: ShoppingCart, label: 'Sales' },
   { to: '/reports', icon: BarChart3, label: 'Reports' },
