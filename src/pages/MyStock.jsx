@@ -16,22 +16,26 @@ export default function MyStock() {
   const [selectedItem, setSelectedItem] = useState(null)
   const [salePrice, setSalePrice] = useState('')
   const [copied, setCopied] = useState(null)
+  const [adTemplate, setAdTemplate] = useState('')
 
   useEffect(() => {
     if (user) load()
   }, [user])
 
   async function load() {
-    const { data } = await supabase
-      .from('consignments')
-      .select('*, skus(name, carat_size, gold_type, sell_price, color, clarity, appraisal_url, item_id)')
-      .eq('freelancer_id', user.id)
-      .order('created_at', { ascending: false })
+    const [{ data }, template] = await Promise.all([
+      supabase.from('consignments')
+        .select('*, skus(name, carat_size, gold_type, sell_price, color, clarity, appraisal_url, item_id)')
+        .eq('freelancer_id', user.id)
+        .order('created_at', { ascending: false }),
+      getAdTemplate(),
+    ])
     setConsignments(data || [])
+    setAdTemplate(template)
   }
 
   function generateAd(sku) {
-    const template = getAdTemplate()
+    const template = adTemplate
     return template
       .replace(/\{name\}/g, sku.name || '')
       .replace(/\{carat\}/g, sku.carat_size || '')

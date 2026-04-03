@@ -42,6 +42,8 @@ export default function Inventory() {
   const [filterStatus, setFilterStatus] = useState('available')
   const [filterSize, setFilterSize] = useState('all')
   const [filterFreelancer, setFilterFreelancer] = useState('all')
+  const [caratOptions, setCaratOptions] = useState([])
+  const [goldOptions, setGoldOptions] = useState([])
   const [freelancers, setFreelancers] = useState([])
 
   useEffect(() => { load() }, [])
@@ -81,6 +83,9 @@ export default function Inventory() {
       imgMap[img.sku_id].push(img)
     }
     setImages(imgMap)
+    const [cs, gs] = await Promise.all([getCaratSizes(), getGoldTypes()])
+    setCaratOptions(cs)
+    setGoldOptions(gs)
     setLoading(false)
   }
 
@@ -502,14 +507,14 @@ export default function Inventory() {
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Carat Size</label>
                 <select className="input" value={form.carat_size}
                   onChange={e => setForm({ ...form, carat_size: e.target.value, name: `${e.target.value} / ${form.gold_type}` })}>
-                  {getCaratSizes().map(s => <option key={s}>{s}</option>)}
+                  {caratOptions.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Gold Type</label>
                 <select className="input" value={form.gold_type}
                   onChange={e => setForm({ ...form, gold_type: e.target.value, name: `${form.carat_size} / ${e.target.value}` })}>
-                  {getGoldTypes().map(g => <option key={g}>{g}</option>)}
+                  {goldOptions.map(g => <option key={g}>{g}</option>)}
                 </select>
               </div>
             </div>

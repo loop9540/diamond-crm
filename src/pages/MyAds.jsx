@@ -11,17 +11,20 @@ export default function MyAds() {
   const [consignments, setConsignments] = useState([])
   const [images, setImages] = useState({})
   const [copied, setCopied] = useState(null)
+  const [adTemplate, setAdTemplate] = useState('')
 
   useEffect(() => {
     if (user) load()
   }, [user])
 
   async function load() {
-    const [c, img] = await Promise.all([
+    const [c, img, template] = await Promise.all([
       supabase.from('consignments').select('*, skus(name, carat_size, gold_type, sell_price, color, clarity, item_id, appraisal_url)').eq('freelancer_id', user.id).order('created_at', { ascending: false }),
       supabase.from('sku_images').select('*').order('position'),
+      getAdTemplate(),
     ])
     setConsignments(c.data || [])
+    setAdTemplate(template)
 
     const imgMap = {}
     for (const i of img.data || []) {
@@ -32,7 +35,7 @@ export default function MyAds() {
   }
 
   function generateAd(sku) {
-    const template = getAdTemplate()
+    const template = adTemplate
     return template
       .replace(/\{name\}/g, sku.name || '')
       .replace(/\{carat\}/g, sku.carat_size || '')
