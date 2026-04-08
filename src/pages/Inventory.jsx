@@ -5,7 +5,7 @@ import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
 import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search, ShoppingCart } from 'lucide-react'
-import { getCaratSizes, getGoldTypes } from './Settings'
+import { getCaratSizes, getGoldTypes, getCategories } from './Settings'
 import { logAction } from '../lib/audit'
 import { saleCelebration } from '../lib/celebrate'
 
@@ -44,6 +44,8 @@ export default function Inventory() {
   const [filterFreelancer, setFilterFreelancer] = useState('all')
   const [caratOptions, setCaratOptions] = useState([])
   const [goldOptions, setGoldOptions] = useState([])
+  const [categoryOptions, setCategoryOptions] = useState([])
+  const [filterCategory, setFilterCategory] = useState('all')
   const [freelancers, setFreelancers] = useState([])
 
   useEffect(() => { load() }, [])
@@ -83,9 +85,10 @@ export default function Inventory() {
       imgMap[img.sku_id].push(img)
     }
     setImages(imgMap)
-    const [cs, gs] = await Promise.all([getCaratSizes(), getGoldTypes()])
+    const [cs, gs, cats] = await Promise.all([getCaratSizes(), getGoldTypes(), getCategories()])
     setCaratOptions(cs)
     setGoldOptions(gs)
+    setCategoryOptions(cats)
     setLoading(false)
   }
 
@@ -263,6 +266,7 @@ export default function Inventory() {
       if (sizeFilter && !sizeFilter.match(sku.carat_size)) return false
     }
     if (filterStatus !== 'all' && sku.status !== filterStatus) return false
+    if (filterCategory !== 'all' && sku.category !== filterCategory) return false
     if (filterFreelancer !== 'all' && consignedToId[sku.id] !== filterFreelancer) return false
     if (search) {
       const q = search.toLowerCase()
@@ -271,7 +275,7 @@ export default function Inventory() {
     return true
   })
 
-  const hasFilters = filterStatus !== 'all' || filterSize !== 'all' || filterFreelancer !== 'all' || search
+  const hasFilters = filterStatus !== 'all' || filterSize !== 'all' || filterCategory !== 'all' || filterFreelancer !== 'all' || search
 
   // Summary by gold type within each size group
   const goldSummary = {}
@@ -373,12 +377,16 @@ export default function Inventory() {
           <option value="consigned">Consigned</option>
           <option value="sold">Sold</option>
         </select>
+        <select className="input w-auto" value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
+          <option value="all">All categories</option>
+          {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
         <select className="input w-auto" value={filterFreelancer} onChange={e => setFilterFreelancer(e.target.value)}>
           <option value="all">All freelancers</option>
           {freelancers.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
         {hasFilters && (
-          <button className="btn btn-sm btn-secondary text-red-500" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterSize('all'); setFilterFreelancer('all') }}>
+          <button className="btn btn-sm btn-secondary text-red-500" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterSize('all'); setFilterCategory('all'); setFilterFreelancer('all') }}>
             <X size={14} /> Clear
           </button>
         )}
@@ -502,6 +510,14 @@ export default function Inventory() {
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Item' : `Edit ${form.item_id || 'Item'}`} onClose={() => setModal(null)}>
           <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Category</label>
+              <select className="input" value={form.category || ''}
+                onChange={e => setForm({ ...form, category: e.target.value })}>
+                <option value="">Select category...</option>
+                {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-gray-500 mb-1 block">Carat Size</label>

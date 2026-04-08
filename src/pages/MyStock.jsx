@@ -43,6 +43,7 @@ export default function MyStock() {
       .replace(/\{price\}/g, sku.sell_price?.toString() || '')
       .replace(/\{color\}/g, sku.color || '')
       .replace(/\{clarity\}/g, sku.clarity || '')
+      .replace(/\{category\}/g, sku.category || '')
   }
 
   async function copyAd(consignmentId, sku) {

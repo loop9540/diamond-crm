@@ -6,7 +6,7 @@ import Loader from '../components/Loader'
 
 const DEFAULT_CARAT_SIZES = Array.from({ length: 951 }, (_, i) => {
   const val = (i + 50) / 100
-  return parseFloat(val.toFixed(2)) + 'ct'
+  return val.toFixed(2) + 'ct'
 })
 const DEFAULT_GOLD_TYPES = ['WG', 'YG', 'RG']
 const DEFAULT_AD_TEMPLATE = `{name} - Diamond Ring
@@ -41,6 +41,10 @@ export async function getGoldTypes() {
   return fetchSetting('gold_types', DEFAULT_GOLD_TYPES)
 }
 
+export async function getCategories() {
+  return fetchSetting('categories', ['Studs', 'Tennis Bracelet', 'Pendant', 'Ring', 'Chain', 'Other'])
+}
+
 export async function getAdTemplate() {
   return fetchSetting('ad_template', DEFAULT_AD_TEMPLATE)
 }
@@ -56,19 +60,23 @@ export default function Settings() {
   const [adTemplate, setAdTemplate] = useState('')
   const [newCarat, setNewCarat] = useState('')
   const [newGold, setNewGold] = useState('')
+  const [categories, setCategories] = useState([])
+  const [newCategory, setNewCategory] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { load() }, [])
 
   async function load() {
-    const [c, g, a] = await Promise.all([
+    const [c, g, a, cat] = await Promise.all([
       getCaratSizes(),
       getGoldTypes(),
       getAdTemplate(),
+      getCategories(),
     ])
     setCaratSizes(c)
     setGoldTypes(g)
     setAdTemplate(a)
+    setCategories(cat)
     setLoading(false)
   }
 
@@ -109,6 +117,23 @@ export default function Settings() {
     setGoldTypes(updated)
     await saveSetting('gold_types', updated)
     toast('Gold type removed')
+  }
+
+  async function addCategory() {
+    const val = newCategory.trim()
+    if (!val || categories.includes(val)) return
+    const updated = [...categories, val]
+    setCategories(updated)
+    await saveSetting('categories', updated)
+    setNewCategory('')
+    toast('Category added')
+  }
+
+  async function removeCategory(idx) {
+    const updated = categories.filter((_, i) => i !== idx)
+    setCategories(updated)
+    await saveSetting('categories', updated)
+    toast('Category removed')
   }
 
   if (loading) return <div className="mt-4"><Loader rows={3} /></div>
@@ -167,13 +192,37 @@ export default function Settings() {
             </button>
           </div>
         </div>
+        {/* Categories */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 className="text-lg font-semibold mb-2">Categories</h2>
+          <p className="text-xs text-gray-400 mb-4">{categories.length} categories</p>
+          <div className="flex flex-col gap-2 mb-4">
+            {categories.map((cat, i) => (
+              <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5">
+                <span className="text-sm font-medium">{cat}</span>
+                <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  onClick={() => removeCategory(i)}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input className="input flex-1" placeholder="e.g. Earrings" value={newCategory}
+              onChange={e => setNewCategory(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addCategory()} />
+            <button className="btn btn-primary btn-sm" onClick={addCategory}>
+              <Plus size={14} /> Add
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Ad Template */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mt-6">
         <h2 className="text-lg font-semibold mb-2">Ad Template</h2>
         <p className="text-xs text-gray-400 mb-3">
-          Variables: <code className="bg-gray-100 px-1 rounded">{'{name}'}</code> <code className="bg-gray-100 px-1 rounded">{'{carat}'}</code> <code className="bg-gray-100 px-1 rounded">{'{gold_type}'}</code> <code className="bg-gray-100 px-1 rounded">{'{price}'}</code> <code className="bg-gray-100 px-1 rounded">{'{color}'}</code> <code className="bg-gray-100 px-1 rounded">{'{clarity}'}</code>
+          Variables: <code className="bg-gray-100 px-1 rounded">{'{name}'}</code> <code className="bg-gray-100 px-1 rounded">{'{carat}'}</code> <code className="bg-gray-100 px-1 rounded">{'{gold_type}'}</code> <code className="bg-gray-100 px-1 rounded">{'{price}'}</code> <code className="bg-gray-100 px-1 rounded">{'{color}'}</code> <code className="bg-gray-100 px-1 rounded">{'{clarity}'}</code> <code className="bg-gray-100 px-1 rounded">{'{category}'}</code>
         </p>
         <textarea
           className="input min-h-[160px] font-mono text-sm leading-relaxed"
