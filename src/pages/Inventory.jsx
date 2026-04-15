@@ -430,6 +430,22 @@ export default function Inventory() {
         <p className="text-xs text-gray-400 mb-3">{filtered.length} of {skus.length} items</p>
       )}
 
+      {/* Floating bulk assign bar — sticks to top while scrolling */}
+      {selectedIds.size > 0 && (
+        <div className="sticky top-16 z-30 mb-3 bg-[#c3cca6] rounded-2xl shadow-lg shadow-[#c3cca6]/40 p-3 flex items-center justify-between gap-3 animate-bounce-in">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-white text-[#5a6340] font-bold text-sm">{selectedIds.size}</span>
+            <div>
+              <p className="font-semibold text-sm text-black">item{selectedIds.size !== 1 ? 's' : ''} selected</p>
+              <button className="text-xs text-black/60 hover:text-black" onClick={() => setSelectedIds(new Set())}>Clear selection</button>
+            </div>
+          </div>
+          <button className="btn btn-sm bg-black text-white hover:bg-gray-800" onClick={() => setModal('bulk-assign')}>
+            Assign →
+          </button>
+        </div>
+      )}
+
       {/* Mobile cards */}
       <div className="flex flex-col gap-3 sm:hidden">
         {filtered.map(sku => (
@@ -542,19 +558,6 @@ export default function Inventory() {
           </tbody>
         </table>
       </div>
-
-      {/* Floating bulk assign bar */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-8 sm:bottom-8 z-30 bg-white rounded-2xl border border-gray-200 shadow-lg p-4 flex items-center justify-between gap-3 max-w-md sm:max-w-sm mx-auto">
-          <div>
-            <p className="font-semibold text-sm">{selectedIds.size} item{selectedIds.size !== 1 ? 's' : ''} selected</p>
-            <button className="text-xs text-gray-400 hover:text-gray-600" onClick={() => setSelectedIds(new Set())}>Clear</button>
-          </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setModal('bulk-assign')}>
-            Assign
-          </button>
-        </div>
-      )}
 
       {/* Bulk Assign Modal */}
       {modal === 'bulk-assign' && (
