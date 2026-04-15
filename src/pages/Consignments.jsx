@@ -23,7 +23,7 @@ export default function Consignments() {
 
   async function load() {
     const [c, f, s] = await Promise.all([
-      supabase.from('consignments').select('*, profiles(name), skus(item_id, name, sell_price)').order('created_at', { ascending: false }),
+      supabase.from('consignments').select('*, profiles(name), skus(item_id, name, sell_price, cost_price)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
       supabase.from('skus').select('*').eq('status', 'available').order('item_id'),
     ])
@@ -85,7 +85,7 @@ export default function Consignments() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {freelancerGroups.map(g => {
           const color = freelancerColor(g.name)
-          const totalValue = g.items.reduce((s, c) => s + (parseFloat(c.skus?.sell_price) || 0), 0)
+          const totalValue = g.items.reduce((s, c) => s + (parseFloat(c.skus?.cost_price) || 0), 0)
           return (
             <div key={g.freelancer_id}
               onClick={() => navigate(`/consignments/${g.freelancer_id}`)}
@@ -148,7 +148,7 @@ export default function Consignments() {
                 <option value="">Select item...</option>
                 {availableItems.map(s => (
                   <option key={s.id} value={s.id}>
-                    {s.item_id} — {s.name}
+                    {s.item_id} — {s.category ? `${s.category} · ` : ''}{s.name}
                   </option>
                 ))}
               </select>
