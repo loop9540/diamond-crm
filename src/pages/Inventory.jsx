@@ -47,8 +47,42 @@ export default function Inventory() {
   const [categoryOptions, setCategoryOptions] = useState([])
   const [filterCategory, setFilterCategory] = useState('all')
   const [freelancers, setFreelancers] = useState([])
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [assignFreelancerId, setAssignFreelancerId] = useState('')
 
   useEffect(() => { load() }, [])
+
+  function toggleSelect(id) {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    setSelectedIds(next)
+  }
+
+  async function bulkAssign() {
+    if (!assignFreelancerId || selectedIds.size === 0) return
+    const ids = Array.from(selectedIds)
+    const freelancer = freelancers.find(f => f.id === assignFreelancerId)
+    const selectedSkus = skus.filter(s => ids.includes(s.id))
+
+    const consignmentRows = ids.map(sku_id => ({
+      freelancer_id: assignFreelancerId,
+      sku_id,
+      quantity: 1,
+    }))
+    await supabase.from('consignments').insert(consignmentRows)
+    await supabase.from('skus').update({ status: 'consigned' }).in('id', ids)
+
+    for (const sku of selectedSkus) {
+      await logAction({ sku_id: sku.id, item_id: sku.item_id, action: 'assigned', details: `Assigned to ${freelancer?.name}` })
+    }
+
+    setModal(null)
+    setSelectedIds(new Set())
+    setAssignFreelancerId('')
+    toast(`${ids.length} item${ids.length !== 1 ? 's' : ''} assigned to ${freelancer?.name}`)
+    sparkle()
+    load()
+  }
 
   const [consignedTo, setConsignedTo] = useState({})
   const [consignedToId, setConsignedToId] = useState({}) // { sku_id: freelancer_name }
@@ -399,9 +433,14 @@ export default function Inventory() {
       {/* Mobile cards */}
       <div className="flex flex-col gap-3 sm:hidden">
         {filtered.map(sku => (
-          <div key={sku.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div key={sku.id} className={`bg-white rounded-2xl border shadow-sm p-4 ${selectedIds.has(sku.id) ? 'border-[#c3cca6] ring-2 ring-[#c3cca6]/30' : 'border-gray-100'}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
+                {sku.status === 'available' && (
+                  <input type="checkbox" className="w-4 h-4 accent-[#c3cca6]"
+                    checked={selectedIds.has(sku.id)}
+                    onChange={() => toggleSelect(sku.id)} />
+                )}
                 {getThumb(sku.id) ? (
                   <img src={getThumb(sku.id)} className="w-12 h-12 rounded-lg object-cover cursor-pointer"
                     onClick={() => setImageModal({ skuId: sku.id, index: 0 })} />
@@ -438,6 +477,15 @@ export default function Inventory() {
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50/80">
+              <th className="px-2 py-4 w-8">
+                <input type="checkbox" className="w-4 h-4 accent-[#c3cca6]"
+                  checked={filtered.filter(s => s.status === 'available').length > 0 && filtered.filter(s => s.status === 'available').every(s => selectedIds.has(s.id))}
+                  onChange={e => {
+                    const available = filtered.filter(s => s.status === 'available').map(s => s.id)
+                    if (e.target.checked) setSelectedIds(new Set([...selectedIds, ...available]))
+                    else setSelectedIds(new Set([...selectedIds].filter(id => !available.includes(id))))
+                  }} />
+              </th>
               <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Item</th>
               <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">ID</th>
               <th className="text-right px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Cost</th>
@@ -448,7 +496,14 @@ export default function Inventory() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filtered.map(sku => (
-                  <tr key={sku.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={sku.id} className={`hover:bg-gray-50/50 transition-colors ${selectedIds.has(sku.id) ? 'bg-[#c3cca6]/10' : ''}`}>
+                    <td className="px-2 py-3">
+                      {sku.status === 'available' && (
+                        <input type="checkbox" className="w-4 h-4 accent-[#c3cca6]"
+                          checked={selectedIds.has(sku.id)}
+                          onChange={() => toggleSelect(sku.id)} />
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {getThumb(sku.id) ? (
@@ -487,6 +542,45 @@ export default function Inventory() {
           </tbody>
         </table>
       </div>
+
+      {/* Floating bulk assign bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-8 sm:bottom-8 z-30 bg-white rounded-2xl border border-gray-200 shadow-lg p-4 flex items-center justify-between gap-3 max-w-md sm:max-w-sm mx-auto">
+          <div>
+            <p className="font-semibold text-sm">{selectedIds.size} item{selectedIds.size !== 1 ? 's' : ''} selected</p>
+            <button className="text-xs text-gray-400 hover:text-gray-600" onClick={() => setSelectedIds(new Set())}>Clear</button>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => setModal('bulk-assign')}>
+            Assign
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Assign Modal */}
+      {modal === 'bulk-assign' && (
+        <Modal title={`Assign ${selectedIds.size} Item${selectedIds.size !== 1 ? 's' : ''}`} onClose={() => { setModal(null); setAssignFreelancerId('') }}>
+          <div className="flex flex-col gap-3">
+            <div className="bg-gray-50 rounded-xl p-3 max-h-32 overflow-y-auto">
+              {skus.filter(s => selectedIds.has(s.id)).map(s => (
+                <p key={s.id} className="text-xs text-gray-600 mb-1 last:mb-0">
+                  <span className="font-mono font-semibold">{s.item_id}</span> · {s.category ? `${s.category} · ` : ''}{s.name}
+                </p>
+              ))}
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Freelancer</label>
+              <select className="input" value={assignFreelancerId}
+                onChange={e => setAssignFreelancerId(e.target.value)}>
+                <option value="">Select freelancer...</option>
+                {freelancers.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+              </select>
+            </div>
+            <button className="btn btn-primary w-full mt-2" onClick={bulkAssign} disabled={!assignFreelancerId}>
+              Assign to Freelancer
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* Sell Modal */}
       {modal === 'sell' && sellItem && (
