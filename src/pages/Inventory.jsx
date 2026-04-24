@@ -36,6 +36,7 @@ export default function Inventory() {
   const fileRef = useRef()
   const appraisalRef = useRef()
   const [uploadingAppraisal, setUploadingAppraisal] = useState(false)
+  const [pendingAppraisalFile, setPendingAppraisalFile] = useState(null)
   const [sellItem, setSellItem] = useState(null)
   const [sellPrice, setSellPrice] = useState('')
   const [search, setSearch] = useState('')
@@ -49,6 +50,7 @@ export default function Inventory() {
   const [freelancers, setFreelancers] = useState([])
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [assignFreelancerId, setAssignFreelancerId] = useState('')
+  const [bulkSubmitting, setBulkSubmitting] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -59,29 +61,34 @@ export default function Inventory() {
   }
 
   async function bulkAssign() {
-    if (!assignFreelancerId || selectedIds.size === 0) return
-    const ids = Array.from(selectedIds)
-    const freelancer = freelancers.find(f => f.id === assignFreelancerId)
-    const selectedSkus = skus.filter(s => ids.includes(s.id))
+    if (bulkSubmitting || !assignFreelancerId || selectedIds.size === 0) return
+    setBulkSubmitting(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const freelancer = freelancers.find(f => f.id === assignFreelancerId)
+      const selectedSkus = skus.filter(s => ids.includes(s.id))
 
-    const consignmentRows = ids.map(sku_id => ({
-      freelancer_id: assignFreelancerId,
-      sku_id,
-      quantity: 1,
-    }))
-    await supabase.from('consignments').insert(consignmentRows)
-    await supabase.from('skus').update({ status: 'consigned' }).in('id', ids)
+      const consignmentRows = ids.map(sku_id => ({
+        freelancer_id: assignFreelancerId,
+        sku_id,
+        quantity: 1,
+      }))
+      await supabase.from('consignments').insert(consignmentRows)
+      await supabase.from('skus').update({ status: 'consigned' }).in('id', ids)
 
-    for (const sku of selectedSkus) {
-      await logAction({ sku_id: sku.id, item_id: sku.item_id, action: 'assigned', details: `Assigned to ${freelancer?.name}` })
+      for (const sku of selectedSkus) {
+        await logAction({ sku_id: sku.id, item_id: sku.item_id, action: 'assigned', details: `Assigned to ${freelancer?.name}` })
+      }
+
+      setModal(null)
+      setSelectedIds(new Set())
+      setAssignFreelancerId('')
+      toast(`${ids.length} item${ids.length !== 1 ? 's' : ''} assigned to ${freelancer?.name}`)
+      sparkle()
+      load()
+    } finally {
+      setBulkSubmitting(false)
     }
-
-    setModal(null)
-    setSelectedIds(new Set())
-    setAssignFreelancerId('')
-    toast(`${ids.length} item${ids.length !== 1 ? 's' : ''} assigned to ${freelancer?.name}`)
-    sparkle()
-    load()
   }
 
   const [consignedTo, setConsignedTo] = useState({})
@@ -129,6 +136,7 @@ export default function Inventory() {
   function openAdd() {
     setForm(emptySku)
     setEditImages([])
+    setPendingAppraisalFile(null)
     setModal('add')
   }
 
@@ -150,11 +158,23 @@ export default function Inventory() {
       quantity_available: form.status === 'available' ? 1 : 0,
     }
     if (modal === 'add') {
-      const { id, created_at, item_id, ...rest } = payload
+      const { id, created_at, item_id, appraisal_url, ...rest } = payload
       const { data: inserted } = await supabase.from('skus').insert(rest).select().single()
       if (inserted) {
         await logAction({ sku_id: inserted.id, item_id: inserted.item_id, action: 'created', details: `${inserted.name} added to inventory` })
+        // Upload pending appraisal file if present
+        if (pendingAppraisalFile) {
+          const file = pendingAppraisalFile
+          const ext = file.name.split('.').pop()
+          const path = `appraisals/${inserted.id}/${Date.now()}.${ext}`
+          const { error } = await supabase.storage.from('sku-images').upload(path, file)
+          if (!error) {
+            const { data: { publicUrl } } = supabase.storage.from('sku-images').getPublicUrl(path)
+            await supabase.from('skus').update({ appraisal_url: publicUrl }).eq('id', inserted.id)
+          }
+        }
       }
+      setPendingAppraisalFile(null)
     } else {
       const { id, created_at, item_id, ...rest } = payload
       await supabase.from('skus').update(rest).eq('id', editId)
@@ -578,8 +598,8 @@ export default function Inventory() {
                 {freelancers.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </div>
-            <button className="btn btn-primary w-full mt-2" onClick={bulkAssign} disabled={!assignFreelancerId}>
-              Assign to Freelancer
+            <button className="btn btn-primary w-full mt-2" onClick={bulkAssign} disabled={bulkSubmitting || !assignFreelancerId}>
+              {bulkSubmitting ? 'Assigning…' : 'Assign to Freelancer'}
             </button>
           </div>
         </Modal>
@@ -666,36 +686,43 @@ export default function Inventory() {
               </div>
             </div>
 
-            {/* Appraisal section - only show when editing */}
-            {modal === 'edit' && (
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block">Appraisal</label>
-                {form.appraisal_url ? (
-                  <div>
-                    {form.appraisal_url.toLowerCase().endsWith('.pdf') ? (
-                      <a href={form.appraisal_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100 text-sm text-[#5a6340] font-medium mb-2 hover:bg-gray-100 transition-colors">
-                        <Upload size={16} /> View Appraisal PDF
-                      </a>
-                    ) : (
-                      <img src={form.appraisal_url} className="w-full rounded-xl border border-gray-100 cursor-pointer mb-2"
-                        onClick={() => window.open(form.appraisal_url, '_blank')} />
-                    )}
-                    <button onClick={removeAppraisal}
-                      className="btn btn-sm text-red-500 btn-secondary w-full">
-                      <Trash2 size={14} /> Remove Appraisal
-                    </button>
-                  </div>
-                ) : (
-                  <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-[#c3cca6] hover:bg-[#c3cca6]/5 transition-colors ${uploadingAppraisal ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {uploadingAppraisal ? <span className="text-sm text-gray-400">Uploading...</span> : (
-                      <><Upload size={16} className="text-gray-400" /><span className="text-sm text-gray-500">Upload appraisal</span></>
-                    )}
-                    <input ref={appraisalRef} type="file" accept="image/*,.pdf" className="hidden" onChange={uploadAppraisal} />
-                  </label>
-                )}
-              </div>
-            )}
+            {/* Appraisal section */}
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-2 block">Appraisal</label>
+              {modal === 'edit' && form.appraisal_url ? (
+                <div>
+                  {form.appraisal_url.toLowerCase().endsWith('.pdf') ? (
+                    <a href={form.appraisal_url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100 text-sm text-[#5a6340] font-medium mb-2 hover:bg-gray-100 transition-colors">
+                      <Upload size={16} /> View Appraisal PDF
+                    </a>
+                  ) : (
+                    <img src={form.appraisal_url} className="w-full rounded-xl border border-gray-100 cursor-pointer mb-2"
+                      onClick={() => window.open(form.appraisal_url, '_blank')} />
+                  )}
+                  <button onClick={removeAppraisal}
+                    className="btn btn-sm text-red-500 btn-secondary w-full">
+                    <Trash2 size={14} /> Remove Appraisal
+                  </button>
+                </div>
+              ) : modal === 'add' && pendingAppraisalFile ? (
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <span className="text-sm text-gray-700 truncate">{pendingAppraisalFile.name}</span>
+                  <button onClick={() => setPendingAppraisalFile(null)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-[#c3cca6] hover:bg-[#c3cca6]/5 transition-colors ${uploadingAppraisal ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {uploadingAppraisal ? <span className="text-sm text-gray-400">Uploading...</span> : (
+                    <><Upload size={16} className="text-gray-400" /><span className="text-sm text-gray-500">Upload appraisal</span></>
+                  )}
+                  <input ref={appraisalRef} type="file" accept="image/*,.pdf" className="hidden"
+                    onChange={modal === 'add' ? (e => setPendingAppraisalFile(e.target.files[0] || null)) : uploadAppraisal} />
+                </label>
+              )}
+            </div>
 
             {/* Images section - only show when editing */}
             {modal === 'edit' && (
