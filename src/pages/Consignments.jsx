@@ -18,6 +18,7 @@ export default function Consignments() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [form, setForm] = useState({ freelancer_id: '', sku_id: '' })
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -34,25 +35,29 @@ export default function Consignments() {
   }
 
   async function assign() {
-    if (!form.freelancer_id || !form.sku_id) return
+    if (submitting || !form.freelancer_id || !form.sku_id) return
+    setSubmitting(true)
+    try {
+      await supabase.from('consignments').insert({
+        freelancer_id: form.freelancer_id,
+        sku_id: form.sku_id,
+        quantity: 1,
+      })
 
-    await supabase.from('consignments').insert({
-      freelancer_id: form.freelancer_id,
-      sku_id: form.sku_id,
-      quantity: 1,
-    })
+      await supabase.from('skus').update({ status: 'consigned' }).eq('id', form.sku_id)
 
-    await supabase.from('skus').update({ status: 'consigned' }).eq('id', form.sku_id)
+      const item = availableItems.find(s => s.id === form.sku_id)
+      const freelancer = freelancers.find(f => f.id === form.freelancer_id)
+      await logAction({ sku_id: form.sku_id, item_id: item?.item_id, action: 'assigned', details: `Assigned to ${freelancer?.name}` })
 
-    const item = availableItems.find(s => s.id === form.sku_id)
-    const freelancer = freelancers.find(f => f.id === form.freelancer_id)
-    await logAction({ sku_id: form.sku_id, item_id: item?.item_id, action: 'assigned', details: `Assigned to ${freelancer?.name}` })
-
-    setModal(false)
-    setForm({ freelancer_id: '', sku_id: '' })
-    toast('Stock assigned')
-    assignBurst()
-    load()
+      setModal(false)
+      setForm({ freelancer_id: '', sku_id: '' })
+      toast('Stock assigned')
+      assignBurst()
+      load()
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // Group consignments by freelancer
@@ -153,7 +158,9 @@ export default function Consignments() {
                 ))}
               </select>
             </div>
-            <button className="btn btn-primary w-full mt-2" onClick={assign}>Assign</button>
+            <button className="btn btn-primary w-full mt-2" onClick={assign} disabled={submitting}>
+              {submitting ? 'Assigning…' : 'Assign'}
+            </button>
           </div>
         </Modal>
       )}
