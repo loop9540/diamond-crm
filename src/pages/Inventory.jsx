@@ -4,7 +4,7 @@ import Modal from '../components/Modal'
 import Loader from '../components/Loader'
 import { useToast } from '../components/Toast'
 import { sparkle } from '../lib/celebrate'
-import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search, ShoppingCart } from 'lucide-react'
+import { Plus, Pencil, Trash2, Upload, X, ChevronLeft, ChevronRight, Search, ShoppingCart, StickyNote } from 'lucide-react'
 import { getCaratSizes, getGoldTypes, getCategories } from './Settings'
 import { logAction } from '../lib/audit'
 import { saleCelebration } from '../lib/celebrate'
@@ -18,7 +18,7 @@ const STATUS_COLORS = {
 const emptySku = {
   name: '', carat_size: '1ct', gold_type: 'WG',
   cost_price: '', sell_price: '', flat_fee: '',
-  color: '', clarity: '', status: 'available'
+  color: '', clarity: '', status: 'available', notes: ''
 }
 
 export default function Inventory() {
@@ -486,7 +486,10 @@ export default function Inventory() {
                   }`}>{sku.gold_type}</div>
                 )}
                 <div>
-                  <p className="font-semibold text-sm">{sku.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-sm">{sku.name}</p>
+                    {sku.notes && <StickyNote size={12} className="text-amber-500" title={sku.notes} />}
+                  </div>
                   <p className="text-[0.65rem] text-gray-400 font-mono">{sku.item_id}</p>
                 </div>
               </div>
@@ -551,7 +554,10 @@ export default function Inventory() {
                           }`}>{sku.gold_type}</div>
                         )}
                         <div>
-                          <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-gray-900 text-sm">{sku.name}</span>
+                            {sku.notes && <StickyNote size={12} className="text-amber-500" title={sku.notes} />}
+                          </div>
                           {(sku.color || sku.clarity) && (
                             <p className="text-[0.65rem] text-gray-400">{[sku.color, sku.clarity].filter(Boolean).join(' / ')}</p>
                           )}
@@ -684,6 +690,14 @@ export default function Inventory() {
                 <input type="number" step="0.01" className="input" value={form.flat_fee}
                   onChange={e => setForm({ ...form, flat_fee: e.target.value })} />
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Notes <span className="text-gray-400 font-normal">(admin only)</span></label>
+              <textarea className="input min-h-[80px] resize-y" rows={3}
+                placeholder="Private notes about this item..."
+                value={form.notes || ''}
+                onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
 
             {/* Appraisal section */}

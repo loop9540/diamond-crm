@@ -62,6 +62,7 @@ export default function ConsignmentDetail() {
       cost_price: sku.cost_price ?? '',
       sell_price: sku.sell_price ?? '',
       flat_fee: sku.flat_fee ?? '',
+      notes: sku.notes || '',
     })
   }
 
@@ -210,6 +211,13 @@ export default function ConsignmentDetail() {
                 <input type="number" step="0.01" className="input" value={editForm.flat_fee}
                   onChange={e => setEditForm({ ...editForm, flat_fee: e.target.value })} />
               </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Notes <span className="text-gray-400 font-normal">(admin only)</span></label>
+              <textarea className="input min-h-[80px] resize-y" rows={3}
+                placeholder="Private notes about this item..."
+                value={editForm.notes || ''}
+                onChange={e => setEditForm({ ...editForm, notes: e.target.value })} />
             </div>
             <button className="btn btn-primary w-full mt-2" onClick={saveEdit}>Save Changes</button>
           </div>
