@@ -319,6 +319,7 @@ export default function Inventory() {
 
   const SIZE_FILTERS = [
     { label: 'All', value: 'all' },
+    { label: 'Very Small (< 1.00ct)', value: 'very-small', match: s => { const v = parseFloat(s); return v > 0 && v < 1 } },
     { label: 'Small (1.00–1.49ct)', value: 'small', match: s => { const v = parseFloat(s); return v >= 1 && v < 1.5 } },
     { label: 'Medium (1.50–1.99ct)', value: 'medium', match: s => { const v = parseFloat(s); return v >= 1.5 && v < 2 } },
     { label: 'Large (2ct+)', value: 'large', match: s => parseFloat(s) >= 2 },
