@@ -490,6 +490,7 @@ export default function Inventory() {
                     <p className="font-semibold text-sm">{sku.name}</p>
                     {sku.notes && <StickyNote size={12} className="text-amber-500" title={sku.notes} />}
                   </div>
+                  {sku.category && <p className="text-[0.65rem] text-gray-500">{sku.category}</p>}
                   <p className="text-[0.65rem] text-gray-400 font-mono">{sku.item_id}</p>
                 </div>
               </div>
@@ -526,6 +527,7 @@ export default function Inventory() {
                   }} />
               </th>
               <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Item</th>
+              <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Category</th>
               <th className="text-left px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">ID</th>
               <th className="text-right px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Cost</th>
               <th className="text-right px-4 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">Sell</th>
@@ -564,6 +566,7 @@ export default function Inventory() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{sku.category || '—'}</td>
                     <td className="px-4 py-3 text-xs font-mono text-gray-500">{sku.item_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.cost_price}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 text-right">${sku.sell_price}</td>
