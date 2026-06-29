@@ -9,6 +9,21 @@ import { assignBurst } from '../lib/celebrate'
 import { logAction } from '../lib/audit'
 import { freelancerColor } from '../lib/colors'
 
+const GOLD_NAMES = { WG: 'White', YG: 'Yellow' }
+
+// Normalize an item's display name to the "<Category> <carat> <Color>" style
+// (e.g. "Studs 1.09ct White"), rebuilding it from structured fields so older
+// auto-named items like "1.09ct / WG" render consistently. Falls back to the
+// stored name if the fields aren't all present.
+function formatItemName(sku) {
+  if (!sku) return ''
+  const { category, carat_size, gold_type, name } = sku
+  if (category && carat_size && gold_type) {
+    return `${category} ${carat_size} ${GOLD_NAMES[gold_type] || gold_type}`
+  }
+  return name || ''
+}
+
 export default function Consignments() {
   const [consignments, setConsignments] = useState([])
   const [freelancers, setFreelancers] = useState([])
@@ -24,7 +39,7 @@ export default function Consignments() {
 
   async function load() {
     const [c, f, s] = await Promise.all([
-      supabase.from('consignments').select('*, profiles(name), skus(item_id, name, sell_price, cost_price)').order('created_at', { ascending: false }),
+      supabase.from('consignments').select('*, profiles(name), skus(item_id, name, sell_price, cost_price, category, carat_size, gold_type)').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, name').eq('role', 'freelancer').order('name'),
       supabase.from('skus').select('*').eq('status', 'available').order('item_id'),
     ])
@@ -119,7 +134,7 @@ export default function Consignments() {
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {g.items.sort((a, b) => (a.skus?.item_id || '').localeCompare(b.skus?.item_id || '')).map(c => (
                   <span key={c.id} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-gray-50 text-gray-600">
-                    <span className="font-semibold text-[#5a6340]">{c.skus?.item_id}</span> {c.skus?.name}
+                    <span className="font-semibold text-[#5a6340]">{c.skus?.item_id}</span> {formatItemName(c.skus)}
                   </span>
                 ))}
               </div>

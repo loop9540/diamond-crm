@@ -114,7 +114,6 @@ export default function ConsignmentDetail() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-[#c3cca6]/20 text-[#5a6340] font-bold">{c.skus?.item_id}</span>
-                  <p className="font-semibold text-gray-900">{c.skus?.name}</p>
                 </div>
                 <div className="flex gap-3 mt-1 flex-wrap">
                   {c.skus?.category && (

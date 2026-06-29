@@ -290,6 +290,16 @@ export default function Inventory() {
     return `${form.carat_size} / ${form.gold_type}`
   }
 
+  // Preview the item_id the DB will assign on insert: "D" + (highest number + 1),
+  // zero-padded to 3 digits. The DB increments from the max and does not backfill gaps.
+  function nextItemId() {
+    const nums = skus
+      .map(s => parseInt(String(s.item_id || '').replace(/\D/g, ''), 10))
+      .filter(n => !isNaN(n))
+    const max = nums.length ? Math.max(...nums) : 0
+    return `D${String(max + 1).padStart(3, '0')}`
+  }
+
   useEffect(() => {
     if (!imageModal) return
     function handleKey(e) {
@@ -636,6 +646,15 @@ export default function Inventory() {
       {(modal === 'add' || modal === 'edit') && (
         <Modal title={modal === 'add' ? 'Add Item' : `Edit ${form.item_id || 'Item'}`} onClose={() => setModal(null)}>
           <div className="flex flex-col gap-3">
+            {modal === 'add' && (
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Item ID</label>
+                <p className="font-mono font-semibold text-gray-700">
+                  {nextItemId()}
+                  <span className="ml-2 text-[0.65rem] font-sans font-normal text-gray-400">Preview — auto-assigned when you save</span>
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1 block">Category</label>
               <select className="input" value={form.category || ''}
